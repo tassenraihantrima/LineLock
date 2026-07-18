@@ -1,0 +1,106 @@
+/* Centers the landing-page content within the browser window. */
+.app {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+/* Contains the main LineLock introduction. */
+.hero {
+  width: min(680px, 100%);
+  padding: 64px 40px;
+  text-align: center;
+  border: 1px solid #d7dce5;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+}
+
+/* Displays the small message above the game name. */
+.eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #526079;
+}
+
+/* Styles the main LineLock title. */
+.hero h1 {
+  margin: 0;
+  font-size: clamp(3.5rem, 10vw, 6.5rem);
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: #111827;
+}
+
+/* Explains the purpose of the application. */
+.description {
+  max-width: 520px;
+  margin: 24px auto 0;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #526079;
+}
+
+/* Places the temporary game-mode buttons beside one another. */
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+/* Gives both buttons shared sizing and typography. */
+.actions button {
+  min-width: 140px;
+  padding: 13px 20px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Styles the main local-game action. */
+.primary-button {
+  border: 1px solid #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+/* Styles the future online-game action. */
+.secondary-button {
+  border: 1px solid #cbd2df;
+  background: #ffffff;
+  color: #111827;
+}
+
+/* Adds visible feedback when a button is hovered. */
+.actions button:hover {
+  transform: translateY(-1px);
+}
+
+/* Identifies the development phase currently displayed. */
+.phase-label {
+  margin: 32px 0 0;
+  font-size: 0.9rem;
+  color: #7b8496;
+}
+
+/* Stacks the buttons on narrow phone screens. */
+@media (max-width: 520px) {
+  .hero {
+    padding: 48px 24px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions button {
+    width: 100%;
+  }
+}

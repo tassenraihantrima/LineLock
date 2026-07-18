@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    // Compile the backend into modern JavaScript supported by current Node.js.
+    "target": "ES2022",
+
+    // Use Node's modern module system for import and export statements.
+    "module": "NodeNext",
+
+    // Resolve imported files the same way modern Node.js does.
+    "moduleResolution": "NodeNext",
+
+    // Store compiled JavaScript files in server/dist.
+    "outDir": "./dist",
+
+    // Treat server/src as the source-code folder.
+    "rootDir": "./src",
+
+    // Enable strict type checking to catch mistakes earlier.
+    "strict": true,
+
+    // Allow cleaner imports from CommonJS packages.
+    "esModuleInterop": true,
+
+    // Skip type checking inside dependency declaration files.
+    "skipLibCheck": true,
+
+    // Prevent file-name casing problems across operating systems.
+    "forceConsistentCasingInFileNames": true
+  },
+
+  // Compile only files inside the src folder.
+  "include": ["src"],
+
+  // Ignore dependencies and generated build files.
+  "exclude": ["node_modules", "dist"]
+}
