@@ -1,106 +1,95 @@
-/* Centers the landing-page content within the browser window. */
-.app {
-  width: 100%;
-  min-height: 100vh;
+/* Center the Phase 2 summary card on the page. */
+.phase-two-page {
   display: grid;
+  min-height: 100vh;
+  padding: 2rem;
   place-items: center;
-  padding: 24px;
 }
 
-/* Contains the main LineLock introduction. */
-.hero {
-  width: min(680px, 100%);
-  padding: 64px 40px;
-  text-align: center;
-  border: 1px solid #d7dce5;
-  border-radius: 24px;
-  background: #ffffff;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+/* Style the main Phase 2 information panel. */
+.phase-two-card {
+  width: min(760px, 100%);
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.5rem;
+  background: rgba(20, 25, 39, 0.92);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
 }
 
-/* Displays the small message above the game name. */
-.eyebrow {
-  margin: 0 0 12px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #526079;
-}
-
-/* Styles the main LineLock title. */
-.hero h1 {
-  margin: 0;
-  font-size: clamp(3.5rem, 10vw, 6.5rem);
-  line-height: 1;
-  letter-spacing: -0.06em;
-  color: #111827;
-}
-
-/* Explains the purpose of the application. */
-.description {
-  max-width: 520px;
-  margin: 24px auto 0;
-  font-size: 1.1rem;
-  line-height: 1.7;
-  color: #526079;
-}
-
-/* Places the temporary game-mode buttons beside one another. */
-.actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 32px;
-}
-
-/* Gives both buttons shared sizing and typography. */
-.actions button {
-  min-width: 140px;
-  padding: 13px 20px;
-  border-radius: 10px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* Styles the main local-game action. */
-.primary-button {
-  border: 1px solid #111827;
-  background: #111827;
-  color: #ffffff;
-}
-
-/* Styles the future online-game action. */
-.secondary-button {
-  border: 1px solid #cbd2df;
-  background: #ffffff;
-  color: #111827;
-}
-
-/* Adds visible feedback when a button is hovered. */
-.actions button:hover {
-  transform: translateY(-1px);
-}
-
-/* Identifies the development phase currently displayed. */
+/* Display the small development label above the main heading. */
 .phase-label {
-  margin: 32px 0 0;
-  font-size: 0.9rem;
-  color: #7b8496;
+  margin: 0 0 0.75rem;
+  color: #91a7ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
 }
 
-/* Stacks the buttons on narrow phone screens. */
-@media (max-width: 520px) {
-  .hero {
-    padding: 48px 24px;
+/* Style the Phase 2 heading. */
+.phase-two-card h1 {
+  margin: 0;
+  color: #f5f7ff;
+  font-size: clamp(2rem, 6vw, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+/* Keep the description readable and slightly muted. */
+.phase-description {
+  max-width: 620px;
+  margin: 1.25rem 0 2rem;
+  color: #adb5c7;
+  line-height: 1.75;
+}
+
+/* Arrange the generated game values into two columns. */
+.model-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+/* Style each individual game-value card. */
+.model-summary article {
+  display: flex;
+  min-height: 110px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* Style the smaller labels inside each value card. */
+.model-summary span {
+  color: #7f879b;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Make the generated values stand out. */
+.model-summary strong {
+  color: #f5f7ff;
+  font-size: 1.2rem;
+}
+
+/* Highlight the note about the next development phase. */
+.phase-note {
+  margin: 2rem 0 0;
+  color: #91a7ff;
+  font-size: 0.9rem;
+}
+
+/* Stack the summary cards on smaller screens. */
+@media (max-width: 560px) {
+  .phase-two-page {
+    padding: 1rem;
   }
 
-  .actions {
-    flex-direction: column;
-  }
-
-  .actions button {
-    width: 100%;
+  .model-summary {
+    grid-template-columns: 1fr;
   }
 }

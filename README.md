@@ -10,17 +10,20 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 1 establishes the project's technical foundation by setting up:
+Phase 2 is complete.
 
-- React and TypeScript frontend
-- Node.js and Express backend
-- Socket.IO server
-- TypeScript configuration
-- Shared development scripts
-- Initial landing page
-- Backend health-check endpoint
+The project currently includes:
 
-Future phases will gradually introduce gameplay, multiplayer networking, persistent storage, authentication, and player statistics.
+- A React and TypeScript frontend
+- An Express and TypeScript backend
+- Socket.IO configuration for future multiplayer support
+- Type-safe player, edge, box, move, and game-state models
+- Board-generation helpers for edges and boxes
+- Move-validation rules
+- Game-completion and winner-detection helpers
+- A development summary confirming the generated board structure
+
+The visual game board will be implemented in Phase 3.
 
 ---
 
@@ -151,7 +154,7 @@ This starts:
 ## Development Roadmap
 
 - ✅ Phase 1 – Project Foundation
-- ⬜ Phase 2 – Game Models & Rules
+- ✅ Phase 2 – Game Models & Rules
 - ⬜ Phase 3 – Static Game Board
 - ⬜ Phase 4 – Clickable Edges
 - ⬜ Phase 5 – Player Turns

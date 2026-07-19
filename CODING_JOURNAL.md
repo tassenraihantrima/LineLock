@@ -66,16 +66,85 @@ This journal records the development process, technologies, challenges, and less
 - Ran both applications together using the root `npm run dev` command.
 - Confirmed that the frontend landing page rendered successfully.
 
-### Next phase
+---
 
-In Phase 2, I will define the core Dots and Boxes game rules and TypeScript data models. This will include:
+## Phase 2 — Game Models & Rules
 
-- Player data
-- Horizontal and vertical edges
-- Boxes
-- Board dimensions
-- Current turn
-- Scores
+### Goal
+
+Create the TypeScript data structures and rule helpers that will support all future LineLock gameplay.
+
+### Work Completed
+
+- Created a dedicated `game` folder for game logic.
+- Defined TypeScript models for players, edges, boxes, moves, and complete game state.
+- Defined horizontal and vertical edge orientations.
+- Created predictable IDs for edges and boxes.
+- Created a helper that generates all board edges.
+- Created a helper that generates every box and links it to its four surrounding edges.
+- Created a helper that initializes two local players.
+- Created a helper that returns a fresh game state.
+- Added validation for board sizes smaller than two dots per side.
+- Added move-validation rules.
+- Added helpers for checking edge availability.
+- Added helpers for finding boxes connected to an edge.
+- Added helpers for detecting completed boxes.
+- Added helpers for switching players.
+- Added helpers for detecting game completion and determining the winner.
+- Added a temporary Phase 2 summary screen to confirm the generated values.
+
+### Game Model Decisions
+
+Each edge has:
+
+- A unique ID
+- An orientation
+- A row
+- A column
+- An optional player owner
+
+Each box stores the IDs of its four surrounding edges. This will allow later phases to detect a completed box without depending on the visual layout.
+
+The complete game state stores:
+
+- Board size
+- Both players
+- Current player
+- Every edge
+- Every box
 - Game status
-- Rules for completing one or two boxes
-- Rules for receiving an additional turn after claiming a box
+- Winner
+- Move count
+
+### Board Mathematics
+
+For a 5 × 5 dot board:
+
+- Horizontal edges: 5 × 4 = 20
+- Vertical edges: 4 × 5 = 20
+- Total edges: 40
+- Boxes: 4 × 4 = 16
+
+### Technologies Practiced
+
+- TypeScript union types
+- TypeScript tuple types
+- Type-only imports
+- Pure helper functions
+- Array generation
+- Data modeling
+- Input validation
+- Separation of game logic from user-interface code
+
+### Testing Completed
+
+- Confirmed a 5 × 5 board generates 40 edges.
+- Confirmed a 5 × 5 board generates 16 boxes.
+- Confirmed two players are initialized with scores of zero.
+- Confirmed Player 1 begins the game.
+- Confirmed all edges and boxes begin unclaimed.
+- Confirmed invalid board sizes throw an error.
+- Confirmed the client and server run together.
+- Confirmed the production build succeeds.
+- Confirmed client linting succeeds.
+
