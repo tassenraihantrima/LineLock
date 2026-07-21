@@ -10,7 +10,7 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 2 is complete.
+Phase 3 is complete.
 
 The project currently includes:
 
@@ -19,11 +19,15 @@ The project currently includes:
 - Socket.IO configuration for future multiplayer support
 - Type-safe player, edge, box, move, and game-state models
 - Board-generation helpers for edges and boxes
-- Move-validation rules
-- Game-completion and winner-detection helpers
-- A development summary confirming the generated board structure
+- Move-validation and game-rule helpers
+- A reusable static `GameBoard` component
+- A visual 5 × 5 dot board
+- Static horizontal and vertical edge positions
+- Static box positions
+- Player score cards and current-turn information
+- Responsive layouts for desktop and mobile screens
 
-The visual game board will be implemented in Phase 3.
+Clickable edge interaction will be implemented in Phase 4.
 
 ---
 
@@ -155,7 +159,7 @@ This starts:
 
 - ✅ Phase 1 – Project Foundation
 - ✅ Phase 2 – Game Models & Rules
-- ⬜ Phase 3 – Static Game Board
+- ✅ Phase 3 – Static Game Board
 - ⬜ Phase 4 – Clickable Edges
 - ⬜ Phase 5 – Player Turns
 - ⬜ Phase 6 – Box Detection

@@ -1,0 +1,148 @@
+/* Style the section that contains the complete static game board. */
+.board-section {
+    padding: clamp(1.25rem, 4vw, 2rem);
+    border: 1px solid rgba(161, 174, 220, 0.16);
+    border-radius: 1.5rem;
+    background: rgba(17, 22, 36, 0.92);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+/* Place the board title and board size on the same row. */
+.board-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Style the small label above the board title. */
+.board-label {
+    margin: 0 0 0.35rem;
+    color: #91a7ff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Style the main board heading. */
+.board-heading h2 {
+    margin: 0;
+    color: #f5f7ff;
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    letter-spacing: -0.03em;
+}
+
+/* Display the board dimensions in a muted style. */
+.board-size {
+    margin: 0;
+    color: #929bb1;
+    font-size: 0.9rem;
+}
+
+/* Allow the board to scroll horizontally on very small screens. */
+.board-container {
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+    padding: 1rem 0;
+}
+
+/* Arrange dots, edges, and boxes using one shared CSS grid. */
+.game-board {
+    display: grid;
+    width: fit-content;
+    padding: clamp(1.25rem, 5vw, 2.5rem);
+    border: 1px solid rgba(163, 177, 229, 0.12);
+    border-radius: 1.5rem;
+    background:
+        radial-gradient(circle at center,
+            rgba(74, 93, 163, 0.16),
+            transparent 65%),
+        #0c101b;
+}
+
+/* Display each board dot above the surrounding edges. */
+.board-dot {
+    position: relative;
+    z-index: 2;
+    width: 16px;
+    height: 16px;
+    align-self: center;
+    justify-self: center;
+    border: 3px solid #8da2ed;
+    border-radius: 50%;
+    background: #f6f8ff;
+    box-shadow:
+        0 0 0 4px rgba(116, 139, 221, 0.08),
+        0 0 15px rgba(116, 139, 221, 0.42);
+}
+
+/* Reserve the horizontal space between two neighboring dots. */
+.horizontal-edge {
+    display: flex;
+    width: clamp(48px, 8vw, 76px);
+    height: 16px;
+    align-items: center;
+}
+
+/* Draw the temporary visual line inside each horizontal edge space. */
+.horizontal-edge-line {
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(122, 135, 173, 0.38);
+}
+
+/* Reserve the vertical space between two neighboring dots. */
+.vertical-edge {
+    display: flex;
+    width: 16px;
+    height: clamp(48px, 8vw, 76px);
+    justify-content: center;
+}
+
+/* Draw the temporary visual line inside each vertical edge space. */
+.vertical-edge-line {
+    width: 4px;
+    height: 100%;
+    border-radius: 999px;
+    background: rgba(122, 135, 173, 0.38);
+}
+
+/* Reserve the center area of every possible box. */
+.board-box {
+    width: clamp(48px, 8vw, 76px);
+    height: clamp(48px, 8vw, 76px);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.012);
+}
+
+/* Adjust the board spacing for smaller phone screens. */
+@media (max-width: 560px) {
+    .board-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .game-board {
+        padding: 1rem;
+    }
+
+    .board-dot {
+        width: 13px;
+        height: 13px;
+        border-width: 2px;
+    }
+
+    .horizontal-edge,
+    .board-box {
+        width: 42px;
+    }
+
+    .vertical-edge,
+    .board-box {
+        height: 42px;
+    }
+}
