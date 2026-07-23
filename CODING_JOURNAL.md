@@ -225,3 +225,82 @@ These IDs will allow Phase 4 to connect user clicks to the correct edge in the g
 ### Next Phase
 
 Phase 4 will make every horizontal and vertical edge clickable and visually mark claimed edges.
+
+---
+
+## Phase 4 — Clickable Edges
+
+### Goal
+
+Connect every visual board edge to the TypeScript game state and allow players to claim available edges.
+
+### Work Completed
+
+- Converted static horizontal edges into interactive buttons.
+- Converted static vertical edges into interactive buttons.
+- Connected each button to its corresponding edge model ID.
+- Added an edge-click callback to the `GameBoard` component.
+- Added React state to the main application.
+- Added a pure helper for claiming an available edge.
+- Reused the existing move-validation rules.
+- Prevented edges from being claimed more than once.
+- Increased the move count after each valid edge claim.
+- Added hover feedback for available edges.
+- Added visible keyboard-focus feedback.
+- Added blue styling for Player 1 claims.
+- Added pink styling for future Player 2 claims.
+- Added accessible pressed and disabled states.
+- Added a live claimed-edge counter.
+
+### State Update Strategy
+
+The current game state is stored using React's `useState` hook.
+
+When an edge is clicked:
+
+1. The visual component sends the edge ID to the application.
+2. The application creates a move containing the edge ID and current player.
+3. The existing validation rules check the move.
+4. A new edge array is created.
+5. The selected edge receives the current player's number.
+6. The move count increases.
+7. React renders the updated game board.
+
+The original state is not mutated directly.
+
+### Phase Limitation
+
+All valid moves currently belong to Player 1.
+
+Player switching was intentionally excluded because it belongs to Phase 5 of the fixed development roadmap.
+
+### Technologies Practiced
+
+- React state
+- Callback props
+- Interactive buttons
+- Immutable state updates
+- TypeScript event data
+- Existing-rule reuse
+- Conditional CSS classes
+- Disabled button states
+- Keyboard accessibility
+- ARIA pressed states
+
+### Testing Completed
+
+- Confirmed every horizontal edge can be clicked.
+- Confirmed every vertical edge can be clicked.
+- Confirmed claimed edges turn blue.
+- Confirmed claimed edges cannot be selected again.
+- Confirmed unavailable edges are disabled.
+- Confirmed the move count increases after valid moves.
+- Confirmed hovering highlights available edges.
+- Confirmed keyboard focus is visible.
+- Confirmed Player 2 styling is reserved for Phase 5.
+- Confirmed frontend linting succeeds.
+- Confirmed the frontend production build succeeds.
+
+### Next Phase
+
+Phase 5 will alternate the current player after each valid move and display claimed edges using the appropriate player color.

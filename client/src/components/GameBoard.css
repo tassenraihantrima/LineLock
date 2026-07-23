@@ -1,4 +1,4 @@
-/* Style the section that contains the complete static game board. */
+/* Style the section that contains the complete game board. */
 .board-section {
     padding: clamp(1.25rem, 4vw, 2rem);
     border: 1px solid rgba(161, 174, 220, 0.16);
@@ -7,7 +7,7 @@
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
 }
 
-/* Place the board title and board size on the same row. */
+/* Place the board title and board information on the same row. */
 .board-heading {
     display: flex;
     align-items: flex-end;
@@ -34,11 +34,23 @@
     letter-spacing: -0.03em;
 }
 
+/* Keep the board size and move count together. */
+.board-statistics {
+    text-align: right;
+}
+
 /* Display the board dimensions in a muted style. */
 .board-size {
     margin: 0;
     color: #929bb1;
     font-size: 0.9rem;
+}
+
+/* Display the number of claimed edges below the board size. */
+.move-count {
+    margin: 0.3rem 0 0;
+    color: #7180a3;
+    font-size: 0.78rem;
 }
 
 /* Allow the board to scroll horizontally on very small screens. */
@@ -79,6 +91,17 @@
         0 0 15px rgba(116, 139, 221, 0.42);
 }
 
+/* Remove the browser's default appearance from all edge buttons. */
+.horizontal-edge,
+.vertical-edge {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
 /* Reserve the horizontal space between two neighboring dots. */
 .horizontal-edge {
     display: flex;
@@ -87,12 +110,16 @@
     align-items: center;
 }
 
-/* Draw the temporary visual line inside each horizontal edge space. */
+/* Draw the visible line inside each horizontal edge button. */
 .horizontal-edge-line {
     width: 100%;
     height: 4px;
     border-radius: 999px;
     background: rgba(122, 135, 173, 0.38);
+    transition:
+        background 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
 }
 
 /* Reserve the vertical space between two neighboring dots. */
@@ -103,12 +130,69 @@
     justify-content: center;
 }
 
-/* Draw the temporary visual line inside each vertical edge space. */
+/* Draw the visible line inside each vertical edge button. */
 .vertical-edge-line {
     width: 4px;
     height: 100%;
     border-radius: 999px;
     background: rgba(122, 135, 173, 0.38);
+    transition:
+        background 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+}
+
+/* Highlight an available horizontal edge when the pointer moves over it. */
+.horizontal-edge:not(:disabled):hover .horizontal-edge-line {
+    background: rgba(145, 167, 255, 0.82);
+    box-shadow: 0 0 14px rgba(113, 140, 255, 0.45);
+    transform: scaleY(1.5);
+}
+
+/* Highlight an available vertical edge when the pointer moves over it. */
+.vertical-edge:not(:disabled):hover .vertical-edge-line {
+    background: rgba(145, 167, 255, 0.82);
+    box-shadow: 0 0 14px rgba(113, 140, 255, 0.45);
+    transform: scaleX(1.5);
+}
+
+/* Show a visible keyboard-focus state on horizontal edges. */
+.horizontal-edge:focus-visible {
+    outline: 3px solid rgba(145, 167, 255, 0.65);
+    outline-offset: 3px;
+    border-radius: 999px;
+}
+
+/* Show a visible keyboard-focus state on vertical edges. */
+.vertical-edge:focus-visible {
+    outline: 3px solid rgba(145, 167, 255, 0.65);
+    outline-offset: 3px;
+    border-radius: 999px;
+}
+
+/* Display edges claimed by Player 1 in blue. */
+.claimed-by-player-one .horizontal-edge-line,
+.claimed-by-player-one .vertical-edge-line {
+    background: #718cff;
+    box-shadow:
+        0 0 8px rgba(113, 140, 255, 0.7),
+        0 0 18px rgba(113, 140, 255, 0.36);
+}
+
+/* Reserve Player 2's pink edge style for the next phase. */
+.claimed-by-player-two .horizontal-edge-line,
+.claimed-by-player-two .vertical-edge-line {
+    background: #ff719f;
+    box-shadow:
+        0 0 8px rgba(255, 113, 159, 0.66),
+        0 0 18px rgba(255, 113, 159, 0.32);
+}
+
+/* Keep claimed edges visually enabled while preventing more clicks. */
+.horizontal-edge:disabled,
+.vertical-edge:disabled {
+    cursor: default;
+    opacity: 1;
 }
 
 /* Reserve the center area of every possible box. */
@@ -124,6 +208,10 @@
     .board-heading {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .board-statistics {
+        text-align: left;
     }
 
     .game-board {

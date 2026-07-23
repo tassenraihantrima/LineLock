@@ -3,6 +3,7 @@ import type { Box, Edge, GameState } from "../game/gameModels";
 
 type GameBoardProps = {
     gameState: GameState;
+    onEdgeClick: (edgeId: string) => void;
 };
 
 // Find one horizontal edge using its board position.
@@ -44,7 +45,23 @@ function findBox(
     );
 }
 
-function GameBoard({ gameState }: GameBoardProps) {
+// Create a class name that reflects whether an edge has been claimed.
+function createClaimedEdgeClass(edge: Edge | undefined): string {
+    if (edge?.claimedBy === 1) {
+        return "claimed-by-player-one";
+    }
+
+    if (edge?.claimedBy === 2) {
+        return "claimed-by-player-two";
+    }
+
+    return "";
+}
+
+function GameBoard({
+    gameState,
+    onEdgeClick,
+}: GameBoardProps) {
     // The visual grid includes dots, edges, and boxes.
     // A five-dot board becomes a nine-by-nine CSS grid.
     const visualGridSize = gameState.boardSize * 2 - 1;
@@ -65,16 +82,25 @@ function GameBoard({ gameState }: GameBoardProps) {
     );
 
     return (
-        <section className="board-section" aria-labelledby="game-board-heading">
+        <section
+            className="board-section"
+            aria-labelledby="game-board-heading"
+        >
             <div className="board-heading">
                 <div>
                     <p className="board-label">Local game</p>
                     <h2 id="game-board-heading">LineLock Board</h2>
                 </div>
 
-                <p className="board-size">
-                    {gameState.boardSize} × {gameState.boardSize} dots
-                </p>
+                <div className="board-statistics">
+                    <p className="board-size">
+                        {gameState.boardSize} × {gameState.boardSize} dots
+                    </p>
+
+                    <p className="move-count">
+                        {gameState.moveCount} of {gameState.edges.length} edges claimed
+                    </p>
+                </div>
             </div>
 
             <div className="board-container">
@@ -98,8 +124,8 @@ function GameBoard({ gameState }: GameBoardProps) {
                                     key={position.id}
                                     className="board-dot"
                                     role="gridcell"
-                                    aria-label={`Dot at row ${position.row / 2 + 1}, column ${position.column / 2 + 1
-                                        }`}
+                                    aria-label={`Dot at row ${position.row / 2 + 1
+                                        }, column ${position.column / 2 + 1}`}
                                 />
                             );
                         }
@@ -112,17 +138,29 @@ function GameBoard({ gameState }: GameBoardProps) {
                                 (position.column - 1) / 2,
                             );
 
+                            const edgeIsClaimed = edge?.claimedBy !== null;
+                            const claimedClass = createClaimedEdgeClass(edge);
+
                             return (
-                                <div
+                                <button
                                     key={position.id}
-                                    className="horizontal-edge"
+                                    className={`horizontal-edge ${claimedClass}`}
+                                    type="button"
                                     role="gridcell"
                                     data-edge-id={edge?.id}
+                                    disabled={!edge || edgeIsClaimed}
+                                    aria-pressed={edgeIsClaimed}
                                     aria-label={`Horizontal edge at row ${position.row / 2 + 1
-                                        }, column ${(position.column + 1) / 2}`}
+                                        }, column ${(position.column + 1) / 2}${edgeIsClaimed ? ", claimed" : ", available"
+                                        }`}
+                                    onClick={() => {
+                                        if (edge) {
+                                            onEdgeClick(edge.id);
+                                        }
+                                    }}
                                 >
                                     <span className="horizontal-edge-line" />
-                                </div>
+                                </button>
                             );
                         }
 
@@ -134,17 +172,29 @@ function GameBoard({ gameState }: GameBoardProps) {
                                 position.column / 2,
                             );
 
+                            const edgeIsClaimed = edge?.claimedBy !== null;
+                            const claimedClass = createClaimedEdgeClass(edge);
+
                             return (
-                                <div
+                                <button
                                     key={position.id}
-                                    className="vertical-edge"
+                                    className={`vertical-edge ${claimedClass}`}
+                                    type="button"
                                     role="gridcell"
                                     data-edge-id={edge?.id}
+                                    disabled={!edge || edgeIsClaimed}
+                                    aria-pressed={edgeIsClaimed}
                                     aria-label={`Vertical edge at row ${(position.row + 1) / 2
-                                        }, column ${position.column / 2 + 1}`}
+                                        }, column ${position.column / 2 + 1}${edgeIsClaimed ? ", claimed" : ", available"
+                                        }`}
+                                    onClick={() => {
+                                        if (edge) {
+                                            onEdgeClick(edge.id);
+                                        }
+                                    }}
                                 >
                                     <span className="vertical-edge-line" />
-                                </div>
+                                </button>
                             );
                         }
 

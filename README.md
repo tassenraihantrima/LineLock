@@ -10,7 +10,7 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 3 is complete.
+Phase 4 is complete.
 
 The project currently includes:
 
@@ -18,16 +18,17 @@ The project currently includes:
 - An Express and TypeScript backend
 - Socket.IO configuration for future multiplayer support
 - Type-safe player, edge, box, move, and game-state models
-- Board-generation helpers for edges and boxes
-- Move-validation and game-rule helpers
-- A reusable static `GameBoard` component
-- A visual 5 × 5 dot board
-- Static horizontal and vertical edge positions
-- Static box positions
-- Player score cards and current-turn information
-- Responsive layouts for desktop and mobile screens
+- Board-generation and game-rule helpers
+- A reusable visual game-board component
+- A five-by-five dot board
+- Forty interactive edge buttons
+- Hover and keyboard-focus feedback for available edges
+- Player-specific claimed-edge styles
+- Move validation that prevents duplicate claims
+- A live claimed-edge counter
+- Responsive desktop and mobile layouts
 
-Clickable edge interaction will be implemented in Phase 4.
+Player-turn switching will be implemented in Phase 5.
 
 ---
 
@@ -160,7 +161,7 @@ This starts:
 - ✅ Phase 1 – Project Foundation
 - ✅ Phase 2 – Game Models & Rules
 - ✅ Phase 3 – Static Game Board
-- ⬜ Phase 4 – Clickable Edges
+- ✅ Phase 4 – Clickable Edges
 - ⬜ Phase 5 – Player Turns
 - ⬜ Phase 6 – Box Detection
 - ⬜ Phase 7 – Game Completion
