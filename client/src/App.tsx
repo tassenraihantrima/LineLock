@@ -5,17 +5,17 @@ import { claimEdge } from "./game/gameRules";
 import { createInitialGameState } from "./game/gameState";
 
 function App() {
-  // Store the current game state so edge clicks can update the interface.
+  // Store the complete local game state inside the application.
   const [gameState, setGameState] = useState(() =>
     createInitialGameState(5, "Tassen", "Player 2"),
   );
 
-  // Find the active player so the interface can show whose turn it is.
+  // Find the player object matching the current player number.
   const currentPlayer = gameState.players.find(
     (player) => player.number === gameState.currentPlayer,
   );
 
-  // Claim the selected edge for the current player.
+  // Claim the selected edge for the player whose turn is currently active.
   function handleEdgeClick(edgeId: string) {
     setGameState((currentGameState) =>
       claimEdge(currentGameState, {
@@ -39,7 +39,7 @@ function App() {
           <span>LineLock</span>
         </a>
 
-        <span className="phase-badge">Phase 4</span>
+        <span className="phase-badge">Phase 5</span>
       </header>
 
       <main className="main-content">
@@ -48,11 +48,11 @@ function App() {
             Classic strategy. Modern competition.
           </p>
 
-          <h1>Choose an edge and begin controlling the board.</h1>
+          <h1>Take turns and compete for control of the board.</h1>
 
           <p className="hero-description">
-            Every horizontal and vertical edge is now connected to the
-            TypeScript game state and can be claimed by a player.
+            Each valid move now passes control to the other player while
+            preserving every claimed edge in the local game state.
           </p>
         </section>
 
@@ -60,7 +60,12 @@ function App() {
           className="game-information"
           aria-label="Game information"
         >
-          <article className="player-card active-player">
+          <article
+            className={`player-card ${gameState.currentPlayer === 1
+                ? "active-player player-one-active"
+                : ""
+              }`}
+          >
             <div className="player-information">
               <span className="player-dot player-one-dot" />
 
@@ -73,12 +78,23 @@ function App() {
             <strong>{gameState.players[0].score}</strong>
           </article>
 
-          <article className="turn-card">
+          <article
+            className={`turn-card ${gameState.currentPlayer === 1
+                ? "player-one-turn"
+                : "player-two-turn"
+              }`}
+            aria-live="polite"
+          >
             <p>Current player</p>
-            <strong>{currentPlayer?.name ?? "Player 1"}</strong>
+            <strong>{currentPlayer?.name ?? "Unknown player"}</strong>
           </article>
 
-          <article className="player-card">
+          <article
+            className={`player-card ${gameState.currentPlayer === 2
+                ? "active-player player-two-active"
+                : ""
+              }`}
+          >
             <div className="player-information">
               <span className="player-dot player-two-dot" />
 
@@ -101,9 +117,8 @@ function App() {
           <span aria-hidden="true">i</span>
 
           <p>
-            Click any available edge to claim it. All moves currently
-            belong to Player 1 because player-turn switching will be added
-            in Phase 5.
+            Players alternate after every valid edge claim. Box detection,
+            scoring, and the extra-turn rule will be introduced in Phase 6.
           </p>
         </section>
       </main>

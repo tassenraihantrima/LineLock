@@ -117,21 +117,20 @@ export function determineWinner(
     return null;
 }
 
-// Claim one available edge without changing the current player.
-// Player-turn changes will be added separately in Phase 5.
+// Claim an available edge and then pass the turn to the other player.
 export function claimEdge(
     gameState: GameState,
     move: Move,
 ): GameState {
-    // Reuse the existing validation rules before changing the game state.
+    // Validate the requested move before changing any game data.
     const validationResult = validateMove(gameState, move);
 
-    // Return the unchanged state when the requested move is invalid.
+    // Invalid moves return the existing state without switching turns.
     if (!validationResult.isValid) {
         return gameState;
     }
 
-    // Create a new edge array so the original game state is not mutated.
+    // Create a new edge array instead of mutating the existing state.
     const updatedEdges = gameState.edges.map((edge) => {
         if (edge.id !== move.edgeId) {
             return edge;
@@ -143,10 +142,14 @@ export function claimEdge(
         };
     });
 
-    // Return a new game state containing the claimed edge.
+    // Determine which player should act after the current move.
+    const nextPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+
+    // Return a new game state containing the claimed edge and next player.
     return {
         ...gameState,
         edges: updatedEdges,
+        currentPlayer: nextPlayer,
         moveCount: gameState.moveCount + 1,
     };
 }

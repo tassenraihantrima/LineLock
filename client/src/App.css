@@ -127,12 +127,6 @@
   padding: 1rem;
 }
 
-/* Highlight the player whose turn is currently active. */
-.player-card.active-player {
-  border-color: rgba(115, 145, 255, 0.46);
-  box-shadow: inset 0 0 24px rgba(94, 121, 227, 0.08);
-}
-
 /* Place the colored indicator beside the player name. */
 .player-information {
   display: flex;
@@ -182,7 +176,7 @@
 }
 
 /* Emphasize each player's numeric score. */
-.player-card>strong {
+.player-card> strong {
   color: #f5f7ff;
   font-size: 1.65rem;
 }
@@ -275,4 +269,71 @@
     grid-column: auto;
     grid-row: auto;
   }
+}
+
+/* Animate player-card styling when the active turn changes. */
+.player-card {
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+/* Highlight Player 1's card using the blue game color. */
+.player-card.player-one-active {
+  border-color: rgba(113, 140, 255, 0.72);
+  background:
+    linear-gradient(135deg,
+      rgba(113, 140, 255, 0.12),
+      rgba(17, 22, 36, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(113, 140, 255, 0.12),
+    0 10px 30px rgba(33, 52, 117, 0.16);
+  transform: translateY(-2px);
+}
+
+/* Highlight Player 2's card using the pink game color. */
+.player-card.player-two-active {
+  border-color: rgba(255, 113, 159, 0.72);
+  background:
+    linear-gradient(135deg,
+      rgba(255, 113, 159, 0.12),
+      rgba(17, 22, 36, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(255, 113, 159, 0.12),
+    0 10px 30px rgba(113, 33, 66, 0.16);
+  transform: translateY(-2px);
+}
+
+/* Smoothly update the center current-player card. */
+.turn-card {
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* Match the current-player card to Player 1's blue theme. */
+.turn-card.player-one-turn {
+  border-color: rgba(113, 140, 255, 0.3);
+  background: rgba(113, 140, 255, 0.08);
+  box-shadow: inset 0 0 18px rgba(113, 140, 255, 0.04);
+}
+
+/* Match the current-player card to Player 2's pink theme. */
+.turn-card.player-two-turn {
+  border-color: rgba(255, 113, 159, 0.3);
+  background: rgba(255, 113, 159, 0.08);
+  box-shadow: inset 0 0 18px rgba(255, 113, 159, 0.04);
+}
+
+/* Use blue text while Player 1 is active. */
+.turn-card.player-one-turn strong {
+  color: #91a7ff;
+}
+
+/* Use pink text while Player 2 is active. */
+.turn-card.player-two-turn strong {
+  color: #ff8eb3;
 }

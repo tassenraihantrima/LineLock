@@ -304,3 +304,98 @@ Player switching was intentionally excluded because it belongs to Phase 5 of the
 ### Next Phase
 
 Phase 5 will alternate the current player after each valid move and display claimed edges using the appropriate player color.
+
+---
+
+## Phase 5 — Player Turns
+
+### Goal
+
+Introduce local two-player turn management so that control alternates after every valid edge claim.
+
+### Work Completed
+
+- Updated the edge-claiming rule to switch players after a valid move.
+- Preserved each edge's player ownership.
+- Displayed Player 1 claims using blue styling.
+- Displayed Player 2 claims using pink styling.
+- Added conditional active-player styling to both player cards.
+- Updated the current-player card after every valid move.
+- Matched the current-player card styling to the active player's color.
+- Added an ARIA live region for turn announcements.
+- Ensured invalid and duplicate moves do not switch players.
+- Preserved immutable game-state updates.
+- Kept score values unchanged because box detection is not implemented yet.
+
+### Turn-Management Process
+
+When a player selects an available edge:
+
+1. The board sends the selected edge ID to the application.
+2. The application creates a move using the current player number.
+3. The game rules validate the move.
+4. The selected edge is assigned to the current player.
+5. The move count increases.
+6. The current player changes from Player 1 to Player 2 or from Player 2 to Player 1.
+7. React renders the new edge color and active-player information.
+
+Invalid moves return the existing state and do not change the current player.
+
+### Player Ownership
+
+Each claimed edge stores the number of the player who selected it.
+
+- Player 1 edges use the blue visual theme.
+- Player 2 edges use the pink visual theme.
+
+Because ownership is stored in the game state rather than only in the interface, edge colors remain consistent after later state updates.
+
+### Immutable State Updates
+
+The game logic creates a new edge array and returns a new game-state object after each valid move.
+
+The previous state is not modified directly. This allows React to reliably detect the update and render the correct board and current-player information.
+
+### Accessibility
+
+The current-player card uses an ARIA live region so assistive technology can announce turn changes.
+
+Claimed edges remain disabled, preventing the same edge from being selected more than once.
+
+### Phase Limitation
+
+Phase 5 switches players after every valid move.
+
+The traditional Dots and Boxes extra-turn rule is not active yet. Beginning in Phase 6, a player who completes a box will keep the turn instead of passing it to the other player.
+
+### Technologies Practiced
+
+- React state
+- TypeScript union-style player values
+- Conditional class names
+- Immutable state updates
+- Turn-management logic
+- Player-owned game data
+- Dynamic interface rendering
+- CSS transitions
+- ARIA live regions
+- Move validation
+
+### Testing Completed
+
+- Confirmed Player 1 claims blue edges.
+- Confirmed Player 2 claims pink edges.
+- Confirmed turns alternate after valid moves.
+- Confirmed the current-player name updates.
+- Confirmed active-player card styling switches.
+- Confirmed the center turn card changes color.
+- Confirmed claimed edges retain their original owners.
+- Confirmed duplicate moves do not switch the turn.
+- Confirmed duplicate moves do not increase the move count.
+- Confirmed scores remain zero before box detection.
+- Confirmed frontend linting succeeds.
+- Confirmed the frontend production build succeeds.
+
+### Next Phase
+
+Phase 6 will detect completed boxes, assign ownership, update player scores, and allow a player to keep the turn after completing a box.
