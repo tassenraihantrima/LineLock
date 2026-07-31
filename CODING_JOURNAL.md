@@ -529,3 +529,123 @@ Player scores update automatically because the interface reads directly from the
 ### Next Phase
 
 Phase 7 will detect when every edge has been claimed, determine the winner or tie, prevent additional moves, display the final result, and add a local-game restart control.
+
+---
+
+## Phase 7 — Game Completion
+
+### Goal
+
+Detect the end of a local match, calculate the final result, prevent additional moves, and allow players to restart the game.
+
+### Work Completed
+
+- Added a reusable game-completion helper.
+- Detected completion when every board edge has been claimed.
+- Prevented move validation after game completion.
+- Compared both player scores to determine the winner.
+- Added support for tied final scores.
+- Added a final-result panel.
+- Displayed both player names and final scores.
+- Replaced the current-player display with a completed-game status.
+- Removed active-player highlighting after the match ends.
+- Disabled board interactions after game completion.
+- Added a Play Again button.
+- Reset edges, boxes, scores, move count, and active player.
+- Added accessible final-result announcements.
+- Preserved all Phase 6 scoring and extra-turn behavior.
+
+### Completion Detection
+
+The game is complete when the move count is equal to the total number of edges.
+
+For the current five-by-five dot board:
+
+- Horizontal edges: 20
+- Vertical edges: 20
+- Total edges: 40
+
+The match therefore ends immediately after the fortieth valid edge claim.
+
+### Winner Calculation
+
+The final result is calculated by comparing both player scores.
+
+- Player 1 has the higher score: Player 1 wins.
+- Player 2 has the higher score: Player 2 wins.
+- Both scores are equal: the match ends in a tie.
+
+Because the board contains sixteen boxes, both final scores should always add up to sixteen.
+
+### Move Prevention
+
+The move validator checks whether the match is already complete before processing an edge.
+
+After completion:
+
+- Edge-click handlers no longer submit moves.
+- Edge buttons are disabled.
+- Validation rejects any attempted move.
+- Scores and ownership remain unchanged.
+
+This provides protection in both the user interface and game-rule layer.
+
+### Restart Process
+
+Selecting Play Again creates a completely new initial game state.
+
+The restart resets:
+
+- All edge ownership
+- All box ownership
+- Both player scores
+- The move count
+- The current player
+- The final-result panel
+
+The original player names and board size are preserved.
+
+### Accessibility
+
+The final result uses an assertive ARIA live region so assistive technology can announce the winner or tie immediately.
+
+The restart button includes visible keyboard-focus styling.
+
+Completed board edges and boxes retain their accessible ownership descriptions.
+
+### Technologies Practiced
+
+- Derived React state
+- Winner calculation
+- Tie handling
+- Game lifecycle management
+- Defensive rule validation
+- Conditional rendering
+- Complete state resets
+- Accessible status announcements
+- Button interaction states
+- Responsive result presentation
+
+### Testing Completed
+
+- Confirmed the game remains active before all edges are claimed.
+- Confirmed the fortieth edge completes the match.
+- Confirmed all sixteen boxes receive owners.
+- Confirmed final scores add up to sixteen.
+- Confirmed the higher-scoring player is announced as the winner.
+- Confirmed equal scores produce a tie result.
+- Confirmed the turn card changes to a completed-game status.
+- Confirmed neither player remains highlighted after completion.
+- Confirmed board interactions stop after completion.
+- Confirmed Play Again resets every edge.
+- Confirmed Play Again resets every box.
+- Confirmed Play Again resets both scores.
+- Confirmed Play Again resets the move count.
+- Confirmed Player 1 starts the new game.
+- Confirmed the result panel disappears after restarting.
+- Confirmed frontend linting succeeds.
+- Confirmed the frontend production build succeeds.
+
+### Next Phase
+
+Phase 8 will polish the complete local-game experience with player setup, improved controls, gameplay feedback, and final responsive refinements.

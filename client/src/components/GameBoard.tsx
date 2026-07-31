@@ -7,6 +7,7 @@ import type {
 
 type GameBoardProps = {
     gameState: GameState;
+    isGameComplete: boolean;
     onEdgeClick: (edgeId: string) => void;
 };
 
@@ -83,10 +84,10 @@ function createClaimedBoxClass(
 
 function GameBoard({
     gameState,
+    isGameComplete,
     onEdgeClick,
 }: GameBoardProps) {
     // The rendered grid alternates between dots, edges, and boxes.
-    // A five-dot board requires a nine-by-nine visual CSS grid.
     const visualGridSize = gameState.boardSize * 2 - 1;
 
     // Create one entry for every location in the visual CSS grid.
@@ -113,7 +114,9 @@ function GameBoard({
         >
             <div className="board-heading">
                 <div>
-                    <p className="board-label">Local game</p>
+                    <p className="board-label">
+                        {isGameComplete ? "Game complete" : "Local game"}
+                    </p>
 
                     <h2 id="game-board-heading">
                         LineLock Board
@@ -180,16 +183,22 @@ function GameBoard({
                                     type="button"
                                     role="gridcell"
                                     data-edge-id={edge?.id}
-                                    disabled={!edge || edgeIsClaimed}
+                                    disabled={
+                                        !edge ||
+                                        edgeIsClaimed ||
+                                        isGameComplete
+                                    }
                                     aria-pressed={edgeIsClaimed}
                                     aria-label={`Horizontal edge at row ${position.row / 2 + 1
                                         }, column ${(position.column + 1) / 2
                                         }${edgeIsClaimed
                                             ? ", claimed"
-                                            : ", available"
+                                            : isGameComplete
+                                                ? ", unavailable because the game is complete"
+                                                : ", available"
                                         }`}
                                     onClick={() => {
-                                        if (edge) {
+                                        if (edge && !isGameComplete) {
                                             onEdgeClick(edge.id);
                                         }
                                     }}
@@ -220,16 +229,22 @@ function GameBoard({
                                     type="button"
                                     role="gridcell"
                                     data-edge-id={edge?.id}
-                                    disabled={!edge || edgeIsClaimed}
+                                    disabled={
+                                        !edge ||
+                                        edgeIsClaimed ||
+                                        isGameComplete
+                                    }
                                     aria-pressed={edgeIsClaimed}
                                     aria-label={`Vertical edge at row ${(position.row + 1) / 2
                                         }, column ${position.column / 2 + 1
                                         }${edgeIsClaimed
                                             ? ", claimed"
-                                            : ", available"
+                                            : isGameComplete
+                                                ? ", unavailable because the game is complete"
+                                                : ", available"
                                         }`}
                                     onClick={() => {
-                                        if (edge) {
+                                        if (edge && !isGameComplete) {
                                             onEdgeClick(edge.id);
                                         }
                                     }}

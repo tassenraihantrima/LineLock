@@ -10,7 +10,7 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 6 is complete.
+Phase 7 is complete.
 
 The project currently includes:
 
@@ -30,15 +30,16 @@ The project currently includes:
 - Live score updates
 - Support for completing two boxes with one move
 - Extra turns after completing a box
-- Dynamic current-player information
-- Active-player card highlighting
-- Blue and pink completed-box styling
-- Player initials inside completed boxes
-- Accessible edge and box descriptions
-- A live claimed-edge counter
+- Full-game completion detection
+- Final winner and tie calculation
+- Final-score presentation
+- Prevention of moves after game completion
+- A complete local-game restart control
+- Dynamic current-player and game-status information
+- Accessible edge, box, and game-result descriptions
 - Responsive desktop and mobile layouts
 
-Game completion, winner detection, and local-game restart controls will be implemented in Phase 7.
+Local-game polish, player setup, and additional usability improvements will be implemented in Phase 8.
 
 ---
 
@@ -174,7 +175,7 @@ This starts:
 - ✅ Phase 4 – Clickable Edges
 - ✅ Phase 5 – Player Turns
 - ✅ Phase 6 – Box Detection
-- ⬜ Phase 7 – Game Completion
+- ✅ Phase 7 – Game Completion
 - ⬜ Phase 8 – Local Game Polish
 - ⬜ Phase 9 – Application Routing
 - ⬜ Phase 10 – Socket.IO Integration

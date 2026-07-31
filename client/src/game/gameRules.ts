@@ -32,7 +32,7 @@ function isBoxComplete(
     box: Box,
     edges: Edge[],
 ): boolean {
-    // The top edge shares the same row and column as the box.
+    // Locate the horizontal edge above the box.
     const topEdge = findEdge(
         edges,
         "horizontal",
@@ -40,7 +40,7 @@ function isBoxComplete(
         box.column,
     );
 
-    // The bottom edge is one horizontal row below the box.
+    // Locate the horizontal edge below the box.
     const bottomEdge = findEdge(
         edges,
         "horizontal",
@@ -48,7 +48,7 @@ function isBoxComplete(
         box.column,
     );
 
-    // The left edge shares the same row and column as the box.
+    // Locate the vertical edge to the left of the box.
     const leftEdge = findEdge(
         edges,
         "vertical",
@@ -56,7 +56,7 @@ function isBoxComplete(
         box.column,
     );
 
-    // The right edge is one vertical column to the right of the box.
+    // Locate the vertical edge to the right of the box.
     const rightEdge = findEdge(
         edges,
         "vertical",
@@ -80,11 +80,26 @@ function getOtherPlayer(
     return currentPlayer === 1 ? 2 : 1;
 }
 
+// Determine whether every edge on the board has been claimed.
+export function isGameComplete(
+    gameState: GameState,
+): boolean {
+    return gameState.moveCount >= gameState.edges.length;
+}
+
 // Validate an attempted move before changing the game state.
 export function validateMove(
     gameState: GameState,
     move: Move,
 ): MoveValidationResult {
+    // Prevent moves after every edge has already been claimed.
+    if (isGameComplete(gameState)) {
+        return {
+            isValid: false,
+            message: "The game has already finished.",
+        };
+    }
+
     // Reject moves submitted for someone other than the active player.
     if (move.player !== gameState.currentPlayer) {
         return {
