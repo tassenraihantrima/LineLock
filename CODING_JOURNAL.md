@@ -399,3 +399,133 @@ The traditional Dots and Boxes extra-turn rule is not active yet. Beginning in P
 ### Next Phase
 
 Phase 6 will detect completed boxes, assign ownership, update player scores, and allow a player to keep the turn after completing a box.
+
+---
+
+## Phase 6 — Box Detection
+
+### Goal
+
+Detect completed boxes, assign ownership, update player scores, and implement the traditional extra-turn rule.
+
+### Work Completed
+
+- Added coordinate-based box-completion detection.
+- Located the four surrounding edges of every box.
+- Checked unclaimed boxes after every valid edge move.
+- Assigned newly completed boxes to the player who closed them.
+- Increased the player's score for every newly completed box.
+- Prevented previously completed boxes from being scored again.
+- Supported completing two adjacent boxes with one shared edge.
+- Allowed players to keep their turn after completing a box.
+- Continued passing the turn when no box was completed.
+- Added player-specific completed-box colors.
+- Added the owner's initial inside every completed box.
+- Added accessible descriptions for claimed and unclaimed boxes.
+- Preserved immutable edge, box, player, and game-state updates.
+
+### Box-Detection Process
+
+After a valid edge is selected:
+
+1. The selected edge is assigned to the current player.
+2. A new edge array is created.
+3. Every unclaimed box is checked using the updated edges.
+4. The top, bottom, left, and right edge of each box are located.
+5. A box is complete when all four surrounding edges are claimed.
+6. Every newly completed box is assigned to the current player.
+7. The player's score increases by the number of completed boxes.
+8. The player keeps the turn after completing at least one box.
+9. The turn switches when no boxes are completed.
+
+### Coordinate Relationships
+
+Each box stores a row and column position.
+
+Its four surrounding edges are located using these coordinates:
+
+- Top edge: horizontal edge at the same row and column
+- Bottom edge: horizontal edge one row below
+- Left edge: vertical edge at the same row and column
+- Right edge: vertical edge one column to the right
+
+This approach avoids storing repeated edge objects inside each box.
+
+### Multiple-Box Completion
+
+One edge may be shared by two neighboring boxes.
+
+After every valid move, all unclaimed boxes are checked. This allows a single edge to complete two boxes simultaneously.
+
+When that happens:
+
+- Both boxes are assigned to the current player.
+- The player's score increases by two.
+- The move count increases by one.
+- The player keeps the turn.
+
+### Extra-Turn Rule
+
+The next player is determined using the number of boxes completed by the move.
+
+- Zero completed boxes: control passes to the other player.
+- One completed box: the current player keeps the turn.
+- Two completed boxes: the current player earns two points and keeps the turn.
+
+### Immutable State Updates
+
+Phase 6 creates new arrays for:
+
+- Edges
+- Boxes
+- Players
+
+It then returns a new game-state object containing those arrays.
+
+The existing game state is never modified directly.
+
+### User Interface
+
+Completed boxes now display:
+
+- A blue background when owned by Player 1
+- A pink background when owned by Player 2
+- The first letter of the owner's name
+- An accessible label containing the owner's complete name
+
+Player scores update automatically because the interface reads directly from the game state.
+
+### Technologies Practiced
+
+- Coordinate-based game logic
+- TypeScript helper functions
+- Array filtering and mapping
+- Immutable nested-state updates
+- Score calculation
+- Conditional turn management
+- Multiple-result move handling
+- Conditional React rendering
+- CSS animations
+- Accessible game interfaces
+
+### Testing Completed
+
+- Confirmed incomplete boxes remain unclaimed.
+- Confirmed a box is detected after its fourth edge is claimed.
+- Confirmed the box belongs to the player who claims the fourth edge.
+- Confirmed the correct player's score increases.
+- Confirmed previously completed boxes are not scored twice.
+- Confirmed the player keeps the turn after completing a box.
+- Confirmed the turn switches when no box is completed.
+- Confirmed one edge can complete two neighboring boxes.
+- Confirmed a double-box move awards two points.
+- Confirmed a double-box move increases the move count only once.
+- Confirmed box colors match their owners.
+- Confirmed player initials appear inside completed boxes.
+- Confirmed edge ownership remains unchanged.
+- Confirmed frontend linting succeeds.
+- Confirmed the frontend production build succeeds.
+
+### Next Phase
+
+Phase 7 will detect when every edge has been claimed, determine the winner or tie, prevent additional moves, display the final result, and add a local-game restart control.

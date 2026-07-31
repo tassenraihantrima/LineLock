@@ -1,12 +1,16 @@
 import "./GameBoard.css";
-import type { Box, Edge, GameState } from "../game/gameModels";
+import type {
+    Box,
+    Edge,
+    GameState,
+} from "../game/gameModels";
 
 type GameBoardProps = {
     gameState: GameState;
     onEdgeClick: (edgeId: string) => void;
 };
 
-// Find one horizontal edge using its board position.
+// Find one horizontal edge using its board coordinates.
 function findHorizontalEdge(
     edges: Edge[],
     row: number,
@@ -20,7 +24,7 @@ function findHorizontalEdge(
     );
 }
 
-// Find one vertical edge using its board position.
+// Find one vertical edge using its board coordinates.
 function findVerticalEdge(
     edges: Edge[],
     row: number,
@@ -34,19 +38,23 @@ function findVerticalEdge(
     );
 }
 
-// Find one box using its board position.
+// Find one box using its board coordinates.
 function findBox(
     boxes: Box[],
     row: number,
     column: number,
 ): Box | undefined {
     return boxes.find(
-        (box) => box.row === row && box.column === column,
+        (box) =>
+            box.row === row &&
+            box.column === column,
     );
 }
 
-// Create a class name that reflects whether an edge has been claimed.
-function createClaimedEdgeClass(edge: Edge | undefined): string {
+// Return the visual ownership class for an edge.
+function createClaimedEdgeClass(
+    edge: Edge | undefined,
+): string {
     if (edge?.claimedBy === 1) {
         return "claimed-by-player-one";
     }
@@ -58,17 +66,34 @@ function createClaimedEdgeClass(edge: Edge | undefined): string {
     return "";
 }
 
+// Return the visual ownership class for a completed box.
+function createClaimedBoxClass(
+    box: Box | undefined,
+): string {
+    if (box?.claimedBy === 1) {
+        return "box-claimed-by-player-one";
+    }
+
+    if (box?.claimedBy === 2) {
+        return "box-claimed-by-player-two";
+    }
+
+    return "";
+}
+
 function GameBoard({
     gameState,
     onEdgeClick,
 }: GameBoardProps) {
-    // The visual grid includes dots, edges, and boxes.
-    // A five-dot board becomes a nine-by-nine CSS grid.
+    // The rendered grid alternates between dots, edges, and boxes.
+    // A five-dot board requires a nine-by-nine visual CSS grid.
     const visualGridSize = gameState.boardSize * 2 - 1;
 
-    // Create one entry for every visual row and column position.
+    // Create one entry for every location in the visual CSS grid.
     const gridPositions = Array.from(
-        { length: visualGridSize * visualGridSize },
+        {
+            length: visualGridSize * visualGridSize,
+        },
         (_, index) => {
             const row = Math.floor(index / visualGridSize);
             const column = index % visualGridSize;
@@ -89,7 +114,10 @@ function GameBoard({
             <div className="board-heading">
                 <div>
                     <p className="board-label">Local game</p>
-                    <h2 id="game-board-heading">LineLock Board</h2>
+
+                    <h2 id="game-board-heading">
+                        LineLock Board
+                    </h2>
                 </div>
 
                 <div className="board-statistics">
@@ -117,7 +145,7 @@ function GameBoard({
                         const rowIsEven = position.row % 2 === 0;
                         const columnIsEven = position.column % 2 === 0;
 
-                        // Even rows and columns represent dot positions.
+                        // Even row and column positions contain dots.
                         if (rowIsEven && columnIsEven) {
                             return (
                                 <div
@@ -125,12 +153,13 @@ function GameBoard({
                                     className="board-dot"
                                     role="gridcell"
                                     aria-label={`Dot at row ${position.row / 2 + 1
-                                        }, column ${position.column / 2 + 1}`}
+                                        }, column ${position.column / 2 + 1
+                                        }`}
                                 />
                             );
                         }
 
-                        // Even rows and odd columns represent horizontal edges.
+                        // Even rows and odd columns contain horizontal edges.
                         if (rowIsEven && !columnIsEven) {
                             const edge = findHorizontalEdge(
                                 gameState.edges,
@@ -138,8 +167,11 @@ function GameBoard({
                                 (position.column - 1) / 2,
                             );
 
-                            const edgeIsClaimed = edge?.claimedBy !== null;
-                            const claimedClass = createClaimedEdgeClass(edge);
+                            const edgeIsClaimed =
+                                edge?.claimedBy !== null;
+
+                            const claimedClass =
+                                createClaimedEdgeClass(edge);
 
                             return (
                                 <button
@@ -151,7 +183,10 @@ function GameBoard({
                                     disabled={!edge || edgeIsClaimed}
                                     aria-pressed={edgeIsClaimed}
                                     aria-label={`Horizontal edge at row ${position.row / 2 + 1
-                                        }, column ${(position.column + 1) / 2}${edgeIsClaimed ? ", claimed" : ", available"
+                                        }, column ${(position.column + 1) / 2
+                                        }${edgeIsClaimed
+                                            ? ", claimed"
+                                            : ", available"
                                         }`}
                                     onClick={() => {
                                         if (edge) {
@@ -164,7 +199,7 @@ function GameBoard({
                             );
                         }
 
-                        // Odd rows and even columns represent vertical edges.
+                        // Odd rows and even columns contain vertical edges.
                         if (!rowIsEven && columnIsEven) {
                             const edge = findVerticalEdge(
                                 gameState.edges,
@@ -172,8 +207,11 @@ function GameBoard({
                                 position.column / 2,
                             );
 
-                            const edgeIsClaimed = edge?.claimedBy !== null;
-                            const claimedClass = createClaimedEdgeClass(edge);
+                            const edgeIsClaimed =
+                                edge?.claimedBy !== null;
+
+                            const claimedClass =
+                                createClaimedEdgeClass(edge);
 
                             return (
                                 <button
@@ -185,7 +223,10 @@ function GameBoard({
                                     disabled={!edge || edgeIsClaimed}
                                     aria-pressed={edgeIsClaimed}
                                     aria-label={`Vertical edge at row ${(position.row + 1) / 2
-                                        }, column ${position.column / 2 + 1}${edgeIsClaimed ? ", claimed" : ", available"
+                                        }, column ${position.column / 2 + 1
+                                        }${edgeIsClaimed
+                                            ? ", claimed"
+                                            : ", available"
                                         }`}
                                     onClick={() => {
                                         if (edge) {
@@ -198,22 +239,49 @@ function GameBoard({
                             );
                         }
 
-                        // Odd rows and columns represent the box spaces.
+                        // Odd row and column positions contain box spaces.
                         const box = findBox(
                             gameState.boxes,
                             (position.row - 1) / 2,
                             (position.column - 1) / 2,
                         );
 
+                        const claimedBoxClass =
+                            createClaimedBoxClass(box);
+
+                        // Locate the player who owns this completed box.
+                        const boxOwner = gameState.players.find(
+                            (player) =>
+                                player.number === box?.claimedBy,
+                        );
+
                         return (
                             <div
                                 key={position.id}
-                                className="board-box"
+                                className={`board-box ${claimedBoxClass}`}
                                 role="gridcell"
                                 data-box-id={box?.id}
-                                aria-label={`Box at row ${(position.row + 1) / 2
-                                    }, column ${(position.column + 1) / 2}`}
-                            />
+                                aria-label={
+                                    boxOwner
+                                        ? `Box at row ${(position.row + 1) / 2
+                                        }, column ${(position.column + 1) / 2
+                                        }, claimed by ${boxOwner.name}`
+                                        : `Unclaimed box at row ${(position.row + 1) / 2
+                                        }, column ${(position.column + 1) / 2
+                                        }`
+                                }
+                            >
+                                {boxOwner && (
+                                    <span
+                                        className="box-owner"
+                                        aria-hidden="true"
+                                    >
+                                        {boxOwner.name
+                                            .charAt(0)
+                                            .toUpperCase()}
+                                    </span>
+                                )}
+                            </div>
                         );
                     })}
                 </div>

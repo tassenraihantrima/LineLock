@@ -3,134 +3,137 @@ import type {
     Edge,
     GameState,
     Move,
-    MoveValidationResult,
     PlayerNumber,
 } from "./gameModels";
 
-// Find an edge using its unique ID.
-export function getEdgeById(
+// Describe the result returned after validating an attempted move.
+export type MoveValidationResult = {
+    isValid: boolean;
+    message: string;
+};
+
+// Find one edge using its orientation and board coordinates.
+function findEdge(
     edges: Edge[],
-    edgeId: string,
+    orientation: Edge["orientation"],
+    row: number,
+    column: number,
 ): Edge | undefined {
-    return edges.find((edge) => edge.id === edgeId);
-}
-
-// Check whether an edge is still available.
-export function isEdgeAvailable(edge: Edge): boolean {
-    return edge.claimedBy === null;
-}
-
-// Check whether a move follows the current game rules.
-export function validateMove(
-    gameState: GameState,
-    move: Move,
-): MoveValidationResult {
-    if (gameState.status !== "playing") {
-        return {
-            isValid: false,
-            reason: "The game is no longer active.",
-        };
-    }
-
-    if (move.player !== gameState.currentPlayer) {
-        return {
-            isValid: false,
-            reason: "It is not this player's turn.",
-        };
-    }
-
-    const selectedEdge = getEdgeById(gameState.edges, move.edgeId);
-
-    if (!selectedEdge) {
-        return {
-            isValid: false,
-            reason: "The selected edge does not exist.",
-        };
-    }
-
-    if (!isEdgeAvailable(selectedEdge)) {
-        return {
-            isValid: false,
-            reason: "The selected edge has already been claimed.",
-        };
-    }
-
-    return {
-        isValid: true,
-    };
-}
-
-// Return the two boxes that may touch an edge.
-// Border edges will only belong to one box.
-export function getBoxesForEdge(boxes: Box[], edgeId: string): Box[] {
-    return boxes.filter(
-        (box) =>
-            box.topEdgeId === edgeId ||
-            box.rightEdgeId === edgeId ||
-            box.bottomEdgeId === edgeId ||
-            box.leftEdgeId === edgeId,
+    return edges.find(
+        (edge) =>
+            edge.orientation === orientation &&
+            edge.row === row &&
+            edge.column === column,
     );
 }
 
 // Check whether all four edges surrounding a box have been claimed.
-export function isBoxComplete(box: Box, edges: Edge[]): boolean {
-    const surroundingEdgeIds = [
-        box.topEdgeId,
-        box.rightEdgeId,
-        box.bottomEdgeId,
-        box.leftEdgeId,
-    ];
+function isBoxComplete(
+    box: Box,
+    edges: Edge[],
+): boolean {
+    // The top edge shares the same row and column as the box.
+    const topEdge = findEdge(
+        edges,
+        "horizontal",
+        box.row,
+        box.column,
+    );
 
-    return surroundingEdgeIds.every((edgeId) => {
-        const edge = getEdgeById(edges, edgeId);
-        return edge?.claimedBy !== null && edge?.claimedBy !== undefined;
-    });
+    // The bottom edge is one horizontal row below the box.
+    const bottomEdge = findEdge(
+        edges,
+        "horizontal",
+        box.row + 1,
+        box.column,
+    );
+
+    // The left edge shares the same row and column as the box.
+    const leftEdge = findEdge(
+        edges,
+        "vertical",
+        box.row,
+        box.column,
+    );
+
+    // The right edge is one vertical column to the right of the box.
+    const rightEdge = findEdge(
+        edges,
+        "vertical",
+        box.row,
+        box.column + 1,
+    );
+
+    // A box is complete only when all four surrounding edges are owned.
+    return (
+        topEdge?.claimedBy !== null &&
+        bottomEdge?.claimedBy !== null &&
+        leftEdge?.claimedBy !== null &&
+        rightEdge?.claimedBy !== null
+    );
 }
 
-// Return the other player's number.
-export function getNextPlayer(
+// Return the player who should act after a normal move.
+function getOtherPlayer(
     currentPlayer: PlayerNumber,
 ): PlayerNumber {
     return currentPlayer === 1 ? 2 : 1;
 }
 
-// A game is complete after every box belongs to a player.
-export function isGameComplete(boxes: Box[]): boolean {
-    return boxes.every((box) => box.claimedBy !== null);
-}
-
-// Compare scores and return the winner.
-// A null result means the scores are tied.
-export function determineWinner(
+// Validate an attempted move before changing the game state.
+export function validateMove(
     gameState: GameState,
-): PlayerNumber | null {
-    const [playerOne, playerTwo] = gameState.players;
-
-    if (playerOne.score > playerTwo.score) {
-        return playerOne.number;
+    move: Move,
+): MoveValidationResult {
+    // Reject moves submitted for someone other than the active player.
+    if (move.player !== gameState.currentPlayer) {
+        return {
+            isValid: false,
+            message: "The move does not belong to the current player.",
+        };
     }
 
-    if (playerTwo.score > playerOne.score) {
-        return playerTwo.number;
+    // Find the requested edge in the current board state.
+    const selectedEdge = gameState.edges.find(
+        (edge) => edge.id === move.edgeId,
+    );
+
+    // Reject edge IDs that do not exist.
+    if (!selectedEdge) {
+        return {
+            isValid: false,
+            message: "The selected edge does not exist.",
+        };
     }
 
-    return null;
+    // Prevent an already claimed edge from being selected again.
+    if (selectedEdge.claimedBy !== null) {
+        return {
+            isValid: false,
+            message: "The selected edge has already been claimed.",
+        };
+    }
+
+    return {
+        isValid: true,
+        message: "The move is valid.",
+    };
 }
 
-// Claim an available edge and then pass the turn to the other player.
+// Claim an edge, detect completed boxes, update scores, and manage turns.
 export function claimEdge(
     gameState: GameState,
     move: Move,
 ): GameState {
-    // Validate the requested move before changing any game data.
+    // Validate the move before creating any updated game data.
     const validationResult = validateMove(gameState, move);
 
-    // Invalid moves return the existing state without switching turns.
+    // Invalid moves leave the complete state unchanged.
     if (!validationResult.isValid) {
         return gameState;
     }
 
-    // Create a new edge array instead of mutating the existing state.
+    // Create a new edge array containing the newly claimed edge.
     const updatedEdges = gameState.edges.map((edge) => {
         if (edge.id !== move.edgeId) {
             return edge;
@@ -142,13 +145,64 @@ export function claimEdge(
         };
     });
 
-    // Determine which player should act after the current move.
-    const nextPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+    // Find every previously unclaimed box completed by this move.
+    const newlyCompletedBoxIds = gameState.boxes
+        .filter(
+            (box) =>
+                box.claimedBy === null &&
+                isBoxComplete(box, updatedEdges),
+        )
+        .map((box) => box.id);
 
-    // Return a new game state containing the claimed edge and next player.
+    // Assign each newly completed box to the player who made the move.
+    const updatedBoxes = gameState.boxes.map((box) => {
+        if (!newlyCompletedBoxIds.includes(box.id)) {
+            return box;
+        }
+
+        return {
+            ...box,
+            claimedBy: move.player,
+        };
+    });
+
+    // One edge may complete zero, one, or two boxes.
+    const completedBoxCount = newlyCompletedBoxIds.length;
+
+    // Update both players while preserving the fixed two-player tuple type.
+    const updatedPlayers: GameState["players"] = [
+        gameState.players[0].number === move.player
+            ? {
+                ...gameState.players[0],
+                score:
+                    gameState.players[0].score +
+                    completedBoxCount,
+            }
+            : gameState.players[0],
+
+        gameState.players[1].number === move.player
+            ? {
+                ...gameState.players[1],
+                score:
+                    gameState.players[1].score +
+                    completedBoxCount,
+            }
+            : gameState.players[1],
+    ];
+
+    // Completing a box gives the current player another turn.
+    // Otherwise, control passes to the other player.
+    const nextPlayer =
+        completedBoxCount > 0
+            ? gameState.currentPlayer
+            : getOtherPlayer(gameState.currentPlayer);
+
+    // Return a completely new game-state object.
     return {
         ...gameState,
         edges: updatedEdges,
+        boxes: updatedBoxes,
+        players: updatedPlayers,
         currentPlayer: nextPlayer,
         moveCount: gameState.moveCount + 1,
     };

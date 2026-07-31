@@ -9,7 +9,8 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 ## Project Status
 
 🚧 **Currently in active development**
-## Project Status
+
+Phase 6 is complete.
 
 The project currently includes:
 
@@ -23,16 +24,22 @@ The project currently includes:
 - Immutable game-state updates
 - Duplicate-move prevention
 - Alternating local player turns
-- Blue edge ownership for Player 1
-- Pink edge ownership for Player 2
+- Player-specific edge ownership
+- Completed-box detection
+- Player ownership for completed boxes
+- Live score updates
+- Support for completing two boxes with one move
+- Extra turns after completing a box
 - Dynamic current-player information
 - Active-player card highlighting
-- Hover and keyboard-focus feedback
-- Accessible edge buttons and live turn updates
+- Blue and pink completed-box styling
+- Player initials inside completed boxes
+- Accessible edge and box descriptions
 - A live claimed-edge counter
 - Responsive desktop and mobile layouts
 
-Box detection, scoring, and the extra-turn rule will be implemented in Phase 6.
+Game completion, winner detection, and local-game restart controls will be implemented in Phase 7.
+
 ---
 
 ## Planned Features
@@ -166,7 +173,7 @@ This starts:
 - ✅ Phase 3 – Static Game Board
 - ✅ Phase 4 – Clickable Edges
 - ✅ Phase 5 – Player Turns
-- ⬜ Phase 6 – Box Detection
+- ✅ Phase 6 – Box Detection
 - ⬜ Phase 7 – Game Completion
 - ⬜ Phase 8 – Local Game Polish
 - ⬜ Phase 9 – Application Routing

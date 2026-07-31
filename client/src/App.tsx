@@ -7,15 +7,20 @@ import { createInitialGameState } from "./game/gameState";
 function App() {
   // Store the complete local game state inside the application.
   const [gameState, setGameState] = useState(() =>
-    createInitialGameState(5, "Tassen", "Player 2"),
+    createInitialGameState(
+      5,
+      "Tassen",
+      "Player 2",
+    ),
   );
 
-  // Find the player object matching the current player number.
+  // Find the player object matching the active player number.
   const currentPlayer = gameState.players.find(
-    (player) => player.number === gameState.currentPlayer,
+    (player) =>
+      player.number === gameState.currentPlayer,
   );
 
-  // Claim the selected edge for the player whose turn is currently active.
+  // Claim the selected edge for the currently active player.
   function handleEdgeClick(edgeId: string) {
     setGameState((currentGameState) =>
       claimEdge(currentGameState, {
@@ -28,8 +33,15 @@ function App() {
   return (
     <div className="app">
       <header className="site-header">
-        <a className="brand" href="/" aria-label="LineLock home">
-          <span className="brand-mark" aria-hidden="true">
+        <a
+          className="brand"
+          href="/"
+          aria-label="LineLock home"
+        >
+          <span
+            className="brand-mark"
+            aria-hidden="true"
+          >
             <span />
             <span />
             <span />
@@ -39,7 +51,9 @@ function App() {
           <span>LineLock</span>
         </a>
 
-        <span className="phase-badge">Phase 5</span>
+        <span className="phase-badge">
+          Phase 6
+        </span>
       </header>
 
       <main className="main-content">
@@ -48,11 +62,13 @@ function App() {
             Classic strategy. Modern competition.
           </p>
 
-          <h1>Take turns and compete for control of the board.</h1>
+          <h1>
+            Complete boxes and take control of the board.
+          </h1>
 
           <p className="hero-description">
-            Each valid move now passes control to the other player while
-            preserving every claimed edge in the local game state.
+            Close the fourth side of a box to claim it, earn a
+            point, and keep control for another move.
           </p>
         </section>
 
@@ -71,11 +87,16 @@ function App() {
 
               <div>
                 <p>Player 1</p>
-                <h2>{gameState.players[0].name}</h2>
+
+                <h2>
+                  {gameState.players[0].name}
+                </h2>
               </div>
             </div>
 
-            <strong>{gameState.players[0].score}</strong>
+            <strong>
+              {gameState.players[0].score}
+            </strong>
           </article>
 
           <article
@@ -86,7 +107,10 @@ function App() {
             aria-live="polite"
           >
             <p>Current player</p>
-            <strong>{currentPlayer?.name ?? "Unknown player"}</strong>
+
+            <strong>
+              {currentPlayer?.name ?? "Unknown player"}
+            </strong>
           </article>
 
           <article
@@ -100,11 +124,16 @@ function App() {
 
               <div>
                 <p>Player 2</p>
-                <h2>{gameState.players[1].name}</h2>
+
+                <h2>
+                  {gameState.players[1].name}
+                </h2>
               </div>
             </div>
 
-            <strong>{gameState.players[1].score}</strong>
+            <strong>
+              {gameState.players[1].score}
+            </strong>
           </article>
         </section>
 
@@ -117,14 +146,17 @@ function App() {
           <span aria-hidden="true">i</span>
 
           <p>
-            Players alternate after every valid edge claim. Box detection,
-            scoring, and the extra-turn rule will be introduced in Phase 6.
+            Completing a box earns one point and grants another
+            turn. The game will officially end when every edge is
+            claimed in Phase 7.
           </p>
         </section>
       </main>
 
       <footer className="site-footer">
-        <p>Built with React, TypeScript, Express, and Socket.IO.</p>
+        <p>
+          Built with React, TypeScript, Express, and Socket.IO.
+        </p>
       </footer>
     </div>
   );

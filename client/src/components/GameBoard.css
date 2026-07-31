@@ -195,12 +195,70 @@
     opacity: 1;
 }
 
-/* Reserve the center area of every possible box. */
+/* Reserve and center the content area of every possible box. */
 .board-box {
+    display: grid;
+    position: relative;
     width: clamp(48px, 8vw, 76px);
     height: clamp(48px, 8vw, 76px);
+    place-items: center;
+    overflow: hidden;
     border-radius: 0.75rem;
     background: rgba(255, 255, 255, 0.012);
+    transition:
+        background 220ms ease,
+        box-shadow 220ms ease;
+}
+
+/* Fill boxes claimed by Player 1 with a blue visual effect. */
+.board-box.box-claimed-by-player-one {
+    background:
+        radial-gradient(circle at center,
+            rgba(113, 140, 255, 0.3),
+            rgba(113, 140, 255, 0.1) 70%);
+    box-shadow:
+        inset 0 0 22px rgba(113, 140, 255, 0.14),
+        0 0 16px rgba(113, 140, 255, 0.08);
+}
+
+/* Fill boxes claimed by Player 2 with a pink visual effect. */
+.board-box.box-claimed-by-player-two {
+    background:
+        radial-gradient(circle at center,
+            rgba(255, 113, 159, 0.28),
+            rgba(255, 113, 159, 0.09) 70%);
+    box-shadow:
+        inset 0 0 22px rgba(255, 113, 159, 0.13),
+        0 0 16px rgba(255, 113, 159, 0.08);
+}
+
+/* Display the owner's initial inside a completed box. */
+.box-owner {
+    display: grid;
+    width: clamp(28px, 4vw, 38px);
+    height: clamp(28px, 4vw, 38px);
+    place-items: center;
+    border: 1px solid rgba(245, 247, 255, 0.14);
+    border-radius: 50%;
+    color: #f5f7ff;
+    background: rgba(8, 12, 23, 0.46);
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: 800;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+    animation: reveal-box-owner 220ms ease-out;
+}
+
+/* Animate the owner's initial when a box is completed. */
+@keyframes reveal-box-owner {
+    from {
+        opacity: 0;
+        transform: scale(0.65);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 /* Adjust the board spacing for smaller phone screens. */
