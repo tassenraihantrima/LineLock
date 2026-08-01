@@ -1,12 +1,22 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-
+import { BrowserRouter } from "react-router";
 import "./index.css";
-import App from "./App.tsx";
+import App from "./App";
 
-// Render the React application inside the root element from index.html.
-createRoot(document.getElementById("root")!).render(
+// Find the HTML element where React will render the application.
+const rootElement = document.getElementById("root");
+
+// Stop immediately if the required root element is missing.
+if (!rootElement) {
+  throw new Error("The LineLock root element could not be found.");
+}
+
+// BrowserRouter keeps the current page synchronized with the browser URL.
+createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </StrictMode>,
 );

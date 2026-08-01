@@ -593,3 +593,530 @@
     width: 100%;
   }
 }
+
+/* Keep the shared header aligned when navigation is displayed. */
+.site-header {
+  gap: 1rem;
+}
+
+/* Arrange the primary page links inside the shared header. */
+.site-navigation {
+  display: flex;
+  margin-left: auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Style each client-side navigation link. */
+.navigation-link {
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.65rem;
+  color: #8791a8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+
+/* Highlight navigation links on hover. */
+.navigation-link:hover {
+  color: #f5f7ff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Identify the page matching the current browser URL. */
+.navigation-link.active-navigation-link {
+  color: #b4c1ff;
+  background: rgba(113, 140, 255, 0.1);
+}
+
+/* Provide visible keyboard focus for route navigation. */
+.navigation-link:focus-visible,
+.primary-page-link:focus-visible,
+.secondary-page-link:focus-visible,
+.mode-card-link:focus-visible {
+  outline: 3px solid rgba(145, 167, 255, 0.5);
+  outline-offset: 3px;
+}
+
+/* Give the landing-page hero additional vertical space. */
+.home-hero {
+  max-width: 850px;
+  padding-top: 1.5rem;
+}
+
+/* Arrange the landing-page calls to action. */
+.hero-actions {
+  display: flex;
+  margin-top: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+/* Style the main page call to action. */
+.primary-page-link {
+  display: inline-flex;
+  min-height: 48px;
+  padding: 0.75rem 1.1rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(145, 167, 255, 0.5);
+  border-radius: 0.85rem;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg,
+      rgba(113, 140, 255, 0.98),
+      rgba(92, 111, 215, 0.94));
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow:
+    0 12px 28px rgba(48, 65, 151, 0.24),
+    inset 0 1px rgba(255, 255, 255, 0.18);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    filter 160ms ease;
+}
+
+/* Lift the primary route link slightly on hover. */
+.primary-page-link:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow:
+    0 16px 34px rgba(48, 65, 151, 0.3),
+    inset 0 1px rgba(255, 255, 255, 0.18);
+}
+
+/* Style secondary page navigation controls. */
+.secondary-page-link {
+  display: inline-flex;
+  min-height: 48px;
+  padding: 0.75rem 1.1rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(161, 174, 220, 0.2);
+  border-radius: 0.85rem;
+  color: #c5ccdc;
+  background: rgba(255, 255, 255, 0.035);
+  font-weight: 750;
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+/* Highlight secondary page navigation on hover. */
+.secondary-page-link:hover {
+  border-color: rgba(145, 167, 255, 0.4);
+  color: #f5f7ff;
+  background: rgba(113, 140, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Display the local and online modes side by side. */
+.game-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+/* Style each landing-page game-mode card. */
+.game-mode-card {
+  display: flex;
+  min-height: 410px;
+  flex-direction: column;
+  padding: clamp(1.4rem, 4vw, 2rem);
+  border: 1px solid rgba(161, 174, 220, 0.15);
+  border-radius: 1.4rem;
+  background: rgba(17, 22, 36, 0.9);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.2);
+}
+
+/* Give the available local mode a blue accent. */
+.available-mode-card {
+  background:
+    radial-gradient(circle at top left,
+      rgba(113, 140, 255, 0.13),
+      transparent 48%),
+    rgba(17, 22, 36, 0.92);
+}
+
+/* Give the future online mode a subtle pink accent. */
+.upcoming-mode-card {
+  background:
+    radial-gradient(circle at top left,
+      rgba(255, 113, 159, 0.1),
+      transparent 48%),
+    rgba(17, 22, 36, 0.92);
+}
+
+/* Style availability labels on mode cards. */
+.mode-status {
+  width: fit-content;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Use blue for the available local mode. */
+.available-status {
+  color: #b4c1ff;
+  background: rgba(113, 140, 255, 0.1);
+}
+
+/* Use pink for the upcoming online mode. */
+.upcoming-status {
+  color: #ffacc8;
+  background: rgba(255, 113, 159, 0.09);
+}
+
+/* Style the small category above each mode heading. */
+.mode-label {
+  margin: 1.4rem 0 0.35rem;
+  color: #778198;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Style each game-mode heading. */
+.game-mode-card h2 {
+  margin: 0;
+  color: #f5f7ff;
+  font-size: clamp(1.7rem, 4vw, 2.35rem);
+  letter-spacing: -0.04em;
+}
+
+/* Style the mode description. */
+.game-mode-card>p:not(.mode-label) {
+  margin: 1rem 0 0;
+  color: #9fa8bc;
+  line-height: 1.65;
+}
+
+/* Display the main features without browser list styling. */
+.mode-feature-list {
+  display: grid;
+  margin: 1.25rem 0;
+  padding: 0;
+  gap: 0.65rem;
+  color: #b8c0d1;
+  font-size: 0.86rem;
+  list-style: none;
+}
+
+/* Add a small visual marker before each feature. */
+.mode-feature-list li::before {
+  content: "•";
+  margin-right: 0.55rem;
+  color: #91a7ff;
+}
+
+/* Keep the route link at the bottom of each mode card. */
+.mode-card-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: auto;
+  align-items: center;
+  gap: 0.5rem;
+  color: #aebcff;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+/* Move the route arrow slightly on hover. */
+.mode-card-link span {
+  transition: transform 160ms ease;
+}
+
+.mode-card-link:hover span {
+  transform: translateX(4px);
+}
+
+/* Separate the instructions from the game-mode cards. */
+.how-to-play-section {
+  margin-top: 5rem;
+}
+
+/* Center the instructional heading. */
+.section-heading {
+  max-width: 620px;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+
+/* Style the instructional heading. */
+.section-heading h2 {
+  margin: 0;
+  color: #f5f7ff;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  letter-spacing: -0.045em;
+}
+
+/* Display the three game instructions in columns. */
+.instruction-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+/* Style each instructional card. */
+.instruction-grid article {
+  padding: 1.35rem;
+  border: 1px solid rgba(161, 174, 220, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.022);
+}
+
+/* Style the instruction number. */
+.instruction-grid article>span {
+  color: #91a7ff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+/* Style each instruction heading. */
+.instruction-grid h3 {
+  margin: 0.8rem 0 0;
+  color: #f5f7ff;
+  font-size: 1.05rem;
+}
+
+/* Style each instruction description. */
+.instruction-grid p {
+  margin: 0.65rem 0 0;
+  color: #8f99af;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+/* Center the future multiplayer page. */
+.online-page {
+  display: grid;
+  place-items: center;
+}
+
+/* Limit the online placeholder width. */
+.online-hero {
+  max-width: 780px;
+}
+
+/* Present the future online functionality in a dedicated panel. */
+.online-roadmap-card {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 2.75rem);
+  border: 1px solid rgba(255, 113, 159, 0.16);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at top,
+      rgba(255, 113, 159, 0.1),
+      transparent 60%),
+    rgba(17, 22, 36, 0.94);
+  text-align: center;
+}
+
+/* Create a simple connection symbol for online mode. */
+.online-status-icon {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 1.1rem;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Style each dot inside the connection symbol. */
+.online-status-icon span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff719f;
+  box-shadow: 0 0 12px rgba(255, 113, 159, 0.45);
+}
+
+/* Reduce the center connection dot. */
+.online-status-icon span:nth-child(2) {
+  width: 6px;
+  height: 6px;
+  opacity: 0.55;
+}
+
+/* Style the multiplayer placeholder label. */
+.online-card-label {
+  margin: 0;
+  color: #ff9cbd;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Style the multiplayer placeholder heading. */
+.online-roadmap-card h2 {
+  margin: 0.65rem 0 0;
+  color: #f5f7ff;
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  letter-spacing: -0.04em;
+}
+
+/* Style the multiplayer placeholder description. */
+.online-roadmap-card>p:not(.online-card-label) {
+  max-width: 560px;
+  margin: 1rem auto 0;
+  color: #9fa8bc;
+  line-height: 1.65;
+}
+
+/* Display the upcoming online phases. */
+.online-phase-list {
+  display: grid;
+  margin: 1.5rem 0;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+/* Style each upcoming multiplayer phase. */
+.online-phase-list article {
+  display: flex;
+  padding: 0.9rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(161, 174, 220, 0.12);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Style the phase number. */
+.online-phase-list span {
+  color: #7f899f;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Style the upcoming phase name. */
+.online-phase-list strong {
+  color: #d7dceb;
+  font-size: 0.86rem;
+}
+
+/* Center the not-found route content. */
+.not-found-page {
+  display: grid;
+  min-height: calc(100vh - 190px);
+  place-items: center;
+}
+
+/* Present the not-found message inside a panel. */
+.not-found-card {
+  width: min(680px, 100%);
+  padding: clamp(1.5rem, 6vw, 3rem);
+  border: 1px solid rgba(161, 174, 220, 0.16);
+  border-radius: 1.5rem;
+  background: rgba(17, 22, 36, 0.92);
+  text-align: center;
+}
+
+/* Display the HTTP-style not-found code. */
+.not-found-code {
+  margin: 0;
+  color: #91a7ff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+/* Style the not-found heading. */
+.not-found-card h1 {
+  margin: 0.75rem 0 0;
+  color: #f5f7ff;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  letter-spacing: -0.05em;
+}
+
+/* Style the not-found explanation. */
+.not-found-card>p:not(.not-found-code) {
+  max-width: 500px;
+  margin: 1rem auto 0;
+  color: #9fa8bc;
+  line-height: 1.65;
+}
+
+/* Arrange the recovery links on the not-found page. */
+.not-found-actions {
+  display: flex;
+  margin-top: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Stack landing-page cards on tablet-sized screens. */
+@media (max-width: 760px) {
+  .site-header {
+    flex-wrap: wrap;
+  }
+
+  .site-navigation {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .game-mode-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .game-mode-card {
+    min-height: 360px;
+  }
+
+  .instruction-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Simplify route controls on narrow phone screens. */
+@media (max-width: 500px) {
+  .site-header {
+    width: min(100% - 1rem, 1100px);
+  }
+
+  .navigation-link {
+    padding: 0.45rem 0.5rem;
+    font-size: 0.72rem;
+  }
+
+  .phase-badge {
+    font-size: 0.65rem;
+  }
+
+  .hero-actions,
+  .not-found-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .primary-page-link,
+  .secondary-page-link {
+    width: 100%;
+  }
+
+  .online-phase-list article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

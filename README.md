@@ -10,37 +10,35 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 8 is complete.
+Phase 9 is complete.
 
 The project currently includes:
 
 - A React and TypeScript frontend
 - An Express and TypeScript backend
-- Socket.IO configuration for future multiplayer support
-- Type-safe player, edge, box, move, and game-state models
-- Configurable local player names
-- Multiple local board sizes
-- Dynamic board-generation utilities
+- Socket.IO server configuration for future multiplayer support
+- Client-side routing using React Router
+- A shared application layout
+- Active primary navigation
+- A dedicated landing page
+- A dedicated local-game route
+- A dedicated future online-game route
+- A custom not-found route
+- Configurable player names and board sizes
+- Dynamic board generation
 - Interactive horizontal and vertical edges
-- Immutable game-state updates
-- Duplicate-move prevention
 - Alternating player turns
-- Player-specific edge and box ownership
-- Completed-box detection
+- Completed-box detection and ownership
 - Live score updates
 - Double-box completion support
-- Extra turns after completing a box
-- Full-game completion detection
+- Extra turns after box completion
 - Winner and tie calculation
-- Final-result presentation
-- Local match restart controls
-- A reusable pre-game setup experience
+- Match restart and setup controls
 - Live gameplay feedback
-- Responsive match controls
-- Accessible forms, controls, board elements, and result announcements
-- Responsive desktop and mobile layouts
+- Responsive route layouts
+- Accessible navigation, forms, controls, game elements, and status announcements
 
-Application routing and separate local and online game pages will be implemented in Phase 9.
+The client will connect to the Socket.IO server in Phase 10.
 
 ---
 
@@ -178,7 +176,7 @@ This starts:
 - ✅ Phase 6 – Box Detection
 - ✅ Phase 7 – Game Completion
 - ✅ Phase 8 – Local Game Polish
-- ⬜ Phase 9 – Application Routing
+- ✅ Phase 9 – Application Routing
 - ⬜ Phase 10 – Socket.IO Integration
 - ⬜ Phase 11 – Online Rooms
 - ⬜ Phase 12 – Server-Controlled Game State

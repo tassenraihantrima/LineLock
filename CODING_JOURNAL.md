@@ -797,3 +797,152 @@ Phase 8 adds:
 ### Next Phase
 
 Phase 9 will introduce application routing and separate the landing, local-game, and future online-game experiences into dedicated routes.
+
+---
+
+## Phase 9 — Application Routing
+
+### Goal
+
+Separate the landing page, local game, future online game, and not-found experience into dedicated browser routes.
+
+### Work Completed
+
+- Installed React Router in the client application.
+- Wrapped the React application with `BrowserRouter`.
+- Created a shared application layout.
+- Added shared header navigation and footer content.
+- Added active navigation-link styling.
+- Created a dedicated landing page.
+- Moved the complete local-game experience into its own page.
+- Created a placeholder page for future online multiplayer.
+- Added a custom not-found route.
+- Added links between major application pages.
+- Preserved all Phase 8 local-game behavior.
+- Added responsive navigation and route-specific layouts.
+- Added keyboard-focus styles for route links.
+- Added direct URL support during local Vite development.
+
+### Route Structure
+
+The application now includes:
+
+- `/` — Landing page
+- `/local` — Configurable local game
+- `/online` — Future online multiplayer
+- `*` — Not-found page
+
+The shared layout contains the brand, navigation, development-phase badge, and footer.
+
+Matched route pages render inside the layout outlet.
+
+### Shared Layout
+
+The layout avoids duplicating common interface elements across pages.
+
+It provides:
+
+- LineLock brand navigation
+- Home link
+- Local Game link
+- Online link
+- Active-page styling
+- Shared footer
+
+Only the page content changes when navigation occurs.
+
+### Local Game Refactor
+
+The local-game state and handlers were moved from `App.tsx` into `LocalGamePage.tsx`.
+
+This keeps routing concerns separate from gameplay concerns.
+
+The local route preserves:
+
+- Setup configuration
+- Player names
+- Board sizes
+- Edge claims
+- Turn management
+- Box detection
+- Scores
+- Extra turns
+- Winner and tie results
+- Restart controls
+- Gameplay feedback
+
+### Online Route
+
+The online page currently acts as a planned-feature placeholder.
+
+It identifies the next multiplayer milestones:
+
+- Socket.IO Integration
+- Online Rooms
+- Server-Controlled Game State
+
+No online gameplay was implemented because that work begins in Phase 10.
+
+### Navigation Behavior
+
+Internal route links use React Router navigation.
+
+The browser URL updates while the React application remains active.
+
+Back and forward browser navigation continue to work because the router is synchronized with browser history.
+
+### Not-Found Handling
+
+Any path that does not match a known route renders the custom not-found page.
+
+The page provides links back to:
+
+- The landing page
+- The local game
+
+### Accessibility
+
+Phase 9 adds:
+
+- A labeled primary navigation region
+- Current-page navigation semantics
+- Visible keyboard-focus styles
+- Descriptive route links
+- Clear not-found recovery controls
+- Existing accessible local-game behavior
+
+### Technologies Practiced
+
+- React Router
+- Browser-based routing
+- Nested routes
+- Shared layouts
+- Route outlets
+- Active navigation links
+- Page-level component separation
+- Browser history navigation
+- Custom not-found routes
+- Responsive navigation design
+
+### Testing Completed
+
+- Confirmed the landing page renders at `/`.
+- Confirmed the local game renders at `/local`.
+- Confirmed the online placeholder renders at `/online`.
+- Confirmed unknown URLs display the not-found page.
+- Confirmed active navigation styling follows the current route.
+- Confirmed browser back navigation works.
+- Confirmed browser forward navigation works.
+- Confirmed route links do not trigger full page reloads.
+- Confirmed direct local-route loading works during development.
+- Confirmed the complete local setup flow still works.
+- Confirmed all local board sizes still render.
+- Confirmed turns, scoring, extra turns, and completion still work.
+- Confirmed restart and setup controls still work.
+- Confirmed responsive navigation works.
+- Confirmed frontend linting succeeds.
+- Confirmed the frontend production build succeeds.
+
+### Next Phase
+
+Phase 10 will connect the React client to the Socket.IO server and establish the first real-time client-server communication.
