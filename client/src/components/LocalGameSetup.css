@@ -1,0 +1,193 @@
+/* Present the local-game settings inside a centered panel. */
+.setup-card {
+    width: min(760px, 100%);
+    margin: 0 auto;
+    padding: clamp(1.5rem, 5vw, 2.75rem);
+    border: 1px solid rgba(161, 174, 220, 0.18);
+    border-radius: 1.5rem;
+    background:
+        radial-gradient(circle at top,
+            rgba(113, 140, 255, 0.1),
+            transparent 58%),
+        rgba(17, 22, 36, 0.94);
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.28),
+        inset 0 0 30px rgba(113, 140, 255, 0.025);
+}
+
+/* Center the introductory setup content. */
+.setup-heading {
+    max-width: 580px;
+    margin: 0 auto 2rem;
+    text-align: center;
+}
+
+/* Style the small setup label above the heading. */
+.setup-label {
+    margin: 0 0 0.55rem;
+    color: #91a7ff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Style the main setup heading. */
+.setup-heading h2 {
+    margin: 0;
+    color: #f5f7ff;
+    font-size: clamp(1.9rem, 5vw, 2.8rem);
+    letter-spacing: -0.045em;
+}
+
+/* Keep the setup description readable and muted. */
+.setup-heading>p:last-child {
+    margin: 0.85rem 0 0;
+    color: #9fa8bc;
+    line-height: 1.65;
+}
+
+/* Arrange all setup controls vertically. */
+.setup-form {
+    display: grid;
+    gap: 1.25rem;
+}
+
+/* Place both player-name fields beside each other on wide screens. */
+.player-input-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+/* Keep each label and form control together. */
+.setup-field {
+    display: grid;
+    gap: 0.5rem;
+}
+
+/* Style the descriptive text above each form control. */
+.setup-field>span {
+    color: #aeb6c9;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+/* Give text fields and the select menu a consistent appearance. */
+.setup-field input,
+.setup-field select {
+    width: 100%;
+    min-height: 48px;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(161, 174, 220, 0.18);
+    border-radius: 0.85rem;
+    outline: none;
+    color: #f5f7ff;
+    background: rgba(8, 12, 23, 0.58);
+    font: inherit;
+    transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+}
+
+/* Use a readable placeholder color inside player-name fields. */
+.setup-field input::placeholder {
+    color: #697389;
+}
+
+/* Highlight form controls while the player is using them. */
+.setup-field input:focus,
+.setup-field select:focus {
+    border-color: rgba(145, 167, 255, 0.66);
+    background: rgba(12, 17, 31, 0.84);
+    box-shadow: 0 0 0 3px rgba(113, 140, 255, 0.12);
+}
+
+/* Display a summary of the selected board configuration. */
+.board-preview-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+/* Style each board-statistics card. */
+.board-preview-summary article {
+    display: grid;
+    min-height: 86px;
+    place-items: center;
+    padding: 0.85rem;
+    border: 1px solid rgba(161, 174, 220, 0.12);
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.025);
+    text-align: center;
+}
+
+/* Style the smaller statistic label. */
+.board-preview-summary span {
+    color: #778198;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* Emphasize the board statistic value. */
+.board-preview-summary strong {
+    color: #f5f7ff;
+    font-size: 1.25rem;
+}
+
+/* Style the primary control used to begin the match. */
+.start-game-button {
+    min-height: 50px;
+    padding: 0.8rem 1.25rem;
+    border: 1px solid rgba(145, 167, 255, 0.48);
+    border-radius: 0.9rem;
+    color: #ffffff;
+    background:
+        linear-gradient(135deg,
+            rgba(113, 140, 255, 0.98),
+            rgba(92, 111, 215, 0.94));
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow:
+        0 12px 28px rgba(48, 65, 151, 0.24),
+        inset 0 1px rgba(255, 255, 255, 0.18);
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        filter 160ms ease;
+}
+
+/* Add subtle movement when the start button is hovered. */
+.start-game-button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+    box-shadow:
+        0 16px 34px rgba(48, 65, 151, 0.3),
+        inset 0 1px rgba(255, 255, 255, 0.18);
+}
+
+/* Display a clear keyboard-focus state. */
+.start-game-button:focus-visible {
+    outline: 3px solid rgba(145, 167, 255, 0.55);
+    outline-offset: 4px;
+}
+
+/* Stack player-name fields on narrow screens. */
+@media (max-width: 600px) {
+    .player-input-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .board-preview-summary {
+        gap: 0.5rem;
+    }
+
+    .board-preview-summary article {
+        min-height: 76px;
+        padding: 0.65rem;
+    }
+}

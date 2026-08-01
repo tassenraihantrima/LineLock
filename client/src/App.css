@@ -176,7 +176,7 @@
 }
 
 /* Emphasize each player's numeric score. */
-.player-card> strong {
+.player-card>strong {
   color: #f5f7ff;
   font-size: 1.65rem;
 }
@@ -357,11 +357,9 @@
   border: 1px solid rgba(145, 167, 255, 0.26);
   border-radius: 1.5rem;
   background:
-    radial-gradient(
-      circle at top,
+    radial-gradient(circle at top,
       rgba(113, 140, 255, 0.16),
-      transparent 65%
-    ),
+      transparent 65%),
     rgba(17, 22, 36, 0.94);
   box-shadow:
     0 20px 55px rgba(0, 0, 0, 0.22),
@@ -425,11 +423,9 @@
   border-radius: 0.85rem;
   color: #f5f7ff;
   background:
-    linear-gradient(
-      135deg,
+    linear-gradient(135deg,
       rgba(113, 140, 255, 0.95),
-      rgba(99, 119, 225, 0.9)
-    );
+      rgba(99, 119, 225, 0.9));
   font: inherit;
   font-weight: 800;
   cursor: pointer;
@@ -455,4 +451,145 @@
 .restart-button:focus-visible {
   outline: 3px solid rgba(145, 167, 255, 0.55);
   outline-offset: 4px;
+}
+
+/* Present the active match settings and controls in one panel. */
+.match-control-bar {
+  display: flex;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(161, 174, 220, 0.14);
+  border-radius: 1rem;
+  background: rgba(17, 22, 36, 0.82);
+}
+
+/* Arrange the current match details vertically. */
+.match-summary {
+  display: grid;
+  gap: 0.2rem;
+}
+
+/* Style the small label above the player names. */
+.match-summary p {
+  margin: 0;
+  color: #778198;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Emphasize the two competing player names. */
+.match-summary strong {
+  color: #f5f7ff;
+  font-size: 0.98rem;
+}
+
+/* Display the chosen board configuration. */
+.match-summary span {
+  color: #8791a8;
+  font-size: 0.78rem;
+}
+
+/* Place both match-control buttons on the same row. */
+.match-control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+/* Style secondary match controls without overpowering the board. */
+.secondary-control-button {
+  min-height: 40px;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgba(161, 174, 220, 0.18);
+  border-radius: 0.75rem;
+  color: #c5ccdc;
+  background: rgba(255, 255, 255, 0.035);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+/* Highlight a secondary control while hovering. */
+.secondary-control-button:hover {
+  border-color: rgba(145, 167, 255, 0.42);
+  color: #f5f7ff;
+  background: rgba(113, 140, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Provide visible keyboard focus for match controls. */
+.secondary-control-button:focus-visible {
+  outline: 3px solid rgba(145, 167, 255, 0.5);
+  outline-offset: 3px;
+}
+
+/* Display live gameplay feedback above the player cards. */
+.game-feedback {
+  display: flex;
+  margin-bottom: 1rem;
+  padding: 0.75rem 0.9rem;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid rgba(145, 167, 255, 0.14);
+  border-radius: 0.85rem;
+  color: #aeb6c9;
+  background: rgba(113, 140, 255, 0.045);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* Remove the default paragraph margin from the feedback message. */
+.game-feedback p {
+  margin: 0;
+}
+
+/* Display a small information icon inside the feedback panel. */
+.game-feedback span {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid rgba(145, 167, 255, 0.22);
+  border-radius: 50%;
+  color: #91a7ff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* Reorganize match controls on tablet-sized screens. */
+@media (max-width: 720px) {
+  .match-control-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .match-control-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* Expand match-control buttons on narrow phone screens. */
+@media (max-width: 500px) {
+  .match-control-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .secondary-control-button {
+    width: 100%;
+  }
 }

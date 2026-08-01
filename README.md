@@ -10,7 +10,7 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 7 is complete.
+Phase 8 is complete.
 
 The project currently includes:
 
@@ -18,28 +18,29 @@ The project currently includes:
 - An Express and TypeScript backend
 - Socket.IO configuration for future multiplayer support
 - Type-safe player, edge, box, move, and game-state models
-- Board-generation and move-validation utilities
-- A responsive five-by-five dot game board
-- Forty interactive horizontal and vertical edges
+- Configurable local player names
+- Multiple local board sizes
+- Dynamic board-generation utilities
+- Interactive horizontal and vertical edges
 - Immutable game-state updates
 - Duplicate-move prevention
-- Alternating local player turns
-- Player-specific edge ownership
+- Alternating player turns
+- Player-specific edge and box ownership
 - Completed-box detection
-- Player ownership for completed boxes
 - Live score updates
-- Support for completing two boxes with one move
+- Double-box completion support
 - Extra turns after completing a box
 - Full-game completion detection
-- Final winner and tie calculation
-- Final-score presentation
-- Prevention of moves after game completion
-- A complete local-game restart control
-- Dynamic current-player and game-status information
-- Accessible edge, box, and game-result descriptions
+- Winner and tie calculation
+- Final-result presentation
+- Local match restart controls
+- A reusable pre-game setup experience
+- Live gameplay feedback
+- Responsive match controls
+- Accessible forms, controls, board elements, and result announcements
 - Responsive desktop and mobile layouts
 
-Local-game polish, player setup, and additional usability improvements will be implemented in Phase 8.
+Application routing and separate local and online game pages will be implemented in Phase 9.
 
 ---
 
@@ -176,7 +177,7 @@ This starts:
 - ✅ Phase 5 – Player Turns
 - ✅ Phase 6 – Box Detection
 - ✅ Phase 7 – Game Completion
-- ⬜ Phase 8 – Local Game Polish
+- ✅ Phase 8 – Local Game Polish
 - ⬜ Phase 9 – Application Routing
 - ⬜ Phase 10 – Socket.IO Integration
 - ⬜ Phase 11 – Online Rooms

@@ -649,3 +649,151 @@ Completed board edges and boxes retain their accessible ownership descriptions.
 ### Next Phase
 
 Phase 8 will polish the complete local-game experience with player setup, improved controls, gameplay feedback, and final responsive refinements.
+
+---
+
+## Phase 8 — Local Game Polish
+
+### Goal
+
+Turn the completed local-game mechanics into a polished and configurable experience before introducing application routing.
+
+### Work Completed
+
+- Added a dedicated local-game setup component.
+- Added customizable Player 1 and Player 2 names.
+- Added selectable board sizes from three-by-three to seven-by-seven dots.
+- Added dynamic dot, edge, and box summaries.
+- Created games using the submitted local settings.
+- Preserved selected settings when restarting a match.
+- Added a control for returning to the setup screen.
+- Added a control for restarting the active match.
+- Added live gameplay feedback after every valid move.
+- Added feedback for normal turns, completed boxes, double-box moves, and game completion.
+- Added readable defaults for empty player names.
+- Preserved all existing scoring, ownership, extra-turn, completion, winner, tie, and restart rules.
+- Added responsive setup and match-control layouts.
+- Added accessible form labels, live feedback, and keyboard-focus states.
+
+### Local Match Setup
+
+The setup form collects:
+
+- Player 1 name
+- Player 2 name
+- Board size
+
+The selected values are stored separately from the active game state.
+
+Submitting the form creates a new game state using those settings and displays the game interface.
+
+### Configurable Board Sizes
+
+The existing board-generation logic supports multiple square board sizes.
+
+Phase 8 exposes the following options:
+
+- Three-by-three dots
+- Four-by-four dots
+- Five-by-five dots
+- Six-by-six dots
+- Seven-by-seven dots
+
+For a board containing `N` dots per side:
+
+- Total dots: `N × N`
+- Total edges: `2 × N × (N - 1)`
+- Total boxes: `(N - 1) × (N - 1)`
+
+### Gameplay Feedback
+
+After every valid move, the application compares the previous and updated game states.
+
+The feedback message identifies:
+
+- The player who claimed the edge
+- The next active player
+- The number of boxes completed
+- Whether the same player keeps the turn
+- Whether the complete game result is ready
+
+This feedback is derived from score differences rather than duplicating the box-detection logic in the interface.
+
+### Restart and Setup Controls
+
+Restart Match:
+
+- Preserves both player names
+- Preserves the selected board size
+- Resets edges
+- Resets boxes
+- Resets scores
+- Resets the move count
+- Returns control to Player 1
+
+Change Setup:
+
+- Hides the current game
+- Returns to the local setup form
+- Preserves the previous form selections
+- Allows a different match configuration to begin
+
+### Input Handling
+
+Player names are trimmed before a match begins.
+
+Empty or whitespace-only names use these defaults:
+
+- Player 1
+- Player 2
+
+Each name is limited to twenty characters to preserve the player-card layout.
+
+### Accessibility
+
+Phase 8 adds:
+
+- Explicit labels for every setup control
+- Keyboard-accessible form fields and buttons
+- Visible focus states
+- A polite live region for gameplay feedback
+- Existing assertive final-result announcements
+- Existing accessible board and ownership labels
+
+### Technologies Practiced
+
+- Controlled React forms
+- Typed component callbacks
+- Shared TypeScript settings
+- Conditional application views
+- Dynamic game initialization
+- Derived gameplay feedback
+- Reusable local-game settings
+- Responsive form design
+- Input cleanup and defaults
+- Accessible status communication
+
+### Testing Completed
+
+- Confirmed custom player names appear throughout the game.
+- Confirmed empty names use readable defaults.
+- Confirmed three-by-three boards generate four boxes.
+- Confirmed four-by-four boards generate nine boxes.
+- Confirmed five-by-five boards generate sixteen boxes.
+- Confirmed six-by-six boards generate twenty-five boxes.
+- Confirmed seven-by-seven boards generate thirty-six boxes.
+- Confirmed each board generates the correct number of edges.
+- Confirmed scoring and extra turns work on each board size.
+- Confirmed normal-move feedback identifies the next player.
+- Confirmed box-completion feedback identifies retained control.
+- Confirmed double-box feedback reports two boxes.
+- Confirmed Restart Match preserves settings and clears the game.
+- Confirmed Change Setup returns to the form.
+- Confirmed the final result still detects winners and ties.
+- Confirmed responsive layouts work on desktop and mobile.
+- Confirmed frontend linting succeeds.
+- Confirmed the frontend production build succeeds.
+
+### Next Phase
+
+Phase 9 will introduce application routing and separate the landing, local-game, and future online-game experiences into dedicated routes.
