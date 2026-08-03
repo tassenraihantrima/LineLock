@@ -10,36 +10,33 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 10 is complete.
+Phase 11 is complete.
 
 The project currently includes:
 
 - A React and TypeScript frontend
 - An Express and TypeScript backend
 - Client-side routing using React Router
-- A landing page, local-game route, online route, and not-found route
-- Configurable local player names and board sizes
-- Complete local Dots and Boxes gameplay
-- Alternating turns and player-specific ownership
-- Completed-box detection and live scoring
-- Double-box completion and extra-turn support
-- Winner and tie detection
-- Match restart and setup controls
-- A typed Socket.IO client
-- A typed Socket.IO server
+- Complete configurable local gameplay
+- A typed Socket.IO client and server
 - Controlled real-time connection lifecycle
-- Server connection confirmation
-- Socket ID and connection-time display
-- Client-to-server ping events
-- Server-to-client pong events
-- Live round-trip latency measurement
-- Connection-error and reconnection controls
-- Cross-origin support for the Vite client
-- Accessible real-time connection feedback
-- Responsive local and online interfaces
+- Client-to-server and server-to-client events
+- Live connection and latency information
+- Online room creation
+- Unique six-character room codes
+- Online room joining
+- Two-player room limits
+- Real-time lobby membership updates
+- Waiting and ready room states
+- Player-position assignment
+- Manual room leaving
+- Automatic disconnect cleanup
+- Empty-room deletion
+- Room validation and acknowledgement errors
+- In-memory room tracking
+- Responsive and accessible online lobby controls
 
-Online room creation and joining will be implemented in Phase 11.
-
+Server-controlled online gameplay will be implemented in Phase 12.
 ---
 
 ## Planned Features
@@ -178,7 +175,7 @@ This starts:
 - ✅ Phase 8 – Local Game Polish
 - ✅ Phase 9 – Application Routing
 - ✅ Phase 10 – Socket.IO Integration
-- ⬜ Phase 11 – Online Rooms
+- ✅ Phase 11 – Online Rooms
 - ⬜ Phase 12 – Server-Controlled Game State
 - ⬜ Phase 13 – Reconnection Handling
 - ⬜ Phase 14 – Authentication & Database

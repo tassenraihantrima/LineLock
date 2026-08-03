@@ -1401,3 +1401,357 @@
     width: 100%;
   }
 }
+
+/* Present room creation, joining, and membership below the connection panel. */
+.online-room-card {
+  width: min(800px, 100%);
+  margin: 1.25rem auto 0;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 1px solid rgba(255, 113, 159, 0.16);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at top right,
+      rgba(255, 113, 159, 0.09),
+      transparent 56%),
+    rgba(17, 22, 36, 0.94);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    inset 0 0 28px rgba(255, 113, 159, 0.02);
+}
+
+/* Place the room heading and lobby status on one row. */
+.online-room-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Style the room-management heading. */
+.online-room-heading h2 {
+  margin: 0.45rem 0 0;
+  color: #f5f7ff;
+  font-size: clamp(1.7rem, 5vw, 2.4rem);
+  letter-spacing: -0.04em;
+}
+
+/* Display whether a room is waiting or ready. */
+.room-status {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(161, 174, 220, 0.16);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Use blue while the room waits for a second player. */
+.room-status-waiting {
+  border-color: rgba(113, 140, 255, 0.3);
+  color: #b4c1ff;
+  background: rgba(113, 140, 255, 0.08);
+}
+
+/* Use green after both player positions are filled. */
+.room-status-ready {
+  border-color: rgba(96, 218, 154, 0.28);
+  color: #a4efc7;
+  background: rgba(96, 218, 154, 0.07);
+}
+
+/* Display room acknowledgements and validation errors. */
+.online-room-message {
+  margin: 1.1rem 0 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(161, 174, 220, 0.12);
+  border-radius: 0.8rem;
+  color: #aeb6c9;
+  background: rgba(255, 255, 255, 0.025);
+  line-height: 1.55;
+}
+
+/* Arrange identity, creation, and joining panels. */
+.room-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+/* Allow the identity panel to span both columns. */
+.room-entry-grid> :first-child {
+  grid-column: 1 / -1;
+}
+
+/* Style each room action panel. */
+.room-entry-panel {
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(161, 174, 220, 0.12);
+  border-radius: 0.9rem;
+  background: rgba(8, 12, 23, 0.34);
+}
+
+/* Style the category above each room panel. */
+.room-panel-label {
+  margin: 0;
+  color: #7c869d;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Style each room action heading. */
+.room-entry-panel h3 {
+  margin: 0;
+  color: #f5f7ff;
+  font-size: 1.05rem;
+}
+
+/* Style room action descriptions. */
+.room-entry-panel>p:not(.room-panel-label) {
+  margin: 0;
+  color: #919bb0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+/* Keep an online room input and its label together. */
+.online-room-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+/* Style room input labels. */
+.online-room-field>span {
+  color: #aeb6c9;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Style player-name and room-code inputs. */
+.online-room-field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(161, 174, 220, 0.18);
+  border-radius: 0.8rem;
+  outline: none;
+  color: #f5f7ff;
+  background: rgba(5, 9, 19, 0.58);
+  font: inherit;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+/* Display readable placeholder text in room inputs. */
+.online-room-field input::placeholder {
+  color: #667087;
+}
+
+/* Highlight room inputs during keyboard or pointer entry. */
+.online-room-field input:focus {
+  border-color: rgba(145, 167, 255, 0.62);
+  background: rgba(10, 15, 28, 0.84);
+  box-shadow: 0 0 0 3px rgba(113, 140, 255, 0.11);
+}
+
+/* Arrange active room information vertically. */
+.active-room-content {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Emphasize the shareable room code. */
+.room-code-panel {
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  border: 1px solid rgba(145, 167, 255, 0.2);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at center,
+      rgba(113, 140, 255, 0.12),
+      transparent 68%),
+    rgba(8, 12, 23, 0.36);
+  text-align: center;
+}
+
+/* Style the room-code label. */
+.room-code-panel p {
+  margin: 0;
+  color: #778198;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Display the room code with wide spacing for readability. */
+.room-code-panel strong {
+  margin-top: 0.55rem;
+  color: #f5f7ff;
+  font-size: clamp(2rem, 7vw, 3rem);
+  letter-spacing: 0.16em;
+}
+
+/* Style the clipboard control beneath the code. */
+.copy-room-code-button {
+  margin-top: 0.9rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(145, 167, 255, 0.25);
+  border-radius: 0.7rem;
+  color: #b8c4ff;
+  background: rgba(113, 140, 255, 0.07);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+/* Arrange both online players as lobby rows. */
+.room-player-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+/* Style one player position in the lobby. */
+.room-player-list article {
+  display: flex;
+  min-width: 0;
+  padding: 0.95rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(161, 174, 220, 0.12);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.024);
+}
+
+/* Highlight the row representing the current browser. */
+.room-player-list .current-room-player {
+  border-color: rgba(113, 140, 255, 0.35);
+  background: rgba(113, 140, 255, 0.065);
+}
+
+/* Arrange the player position and name vertically. */
+.room-player-list article>div {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+/* Style Player 1 and Player 2 labels. */
+.room-player-number {
+  color: #778198;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* Style player names inside the lobby. */
+.room-player-list strong {
+  overflow: hidden;
+  color: #f5f7ff;
+  font-size: 0.95rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Display whether each player position is connected. */
+.room-player-state {
+  color: #9ce8c0;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+/* Use a muted state for the empty Player 2 position. */
+.waiting-player-state {
+  color: #8993a8;
+}
+
+/* Arrange the current-player message and leave control. */
+.active-room-actions {
+  display: flex;
+  padding-top: 0.2rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Style the current room-position message. */
+.active-room-actions p {
+  margin: 0;
+  color: #9ba5b9;
+  font-size: 0.82rem;
+}
+
+/* Style the destructive room-leave action. */
+.leave-room-button {
+  min-height: 40px;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgba(255, 107, 125, 0.25);
+  border-radius: 0.75rem;
+  color: #ffadb8;
+  background: rgba(255, 107, 125, 0.06);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+/* Highlight the leave-room button on hover. */
+.leave-room-button:not(:disabled):hover {
+  border-color: rgba(255, 107, 125, 0.46);
+  background: rgba(255, 107, 125, 0.11);
+  transform: translateY(-1px);
+}
+
+/* Display unavailable room actions clearly. */
+.leave-room-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Provide focus visibility for room action buttons. */
+.copy-room-code-button:focus-visible,
+.leave-room-button:focus-visible {
+  outline: 3px solid rgba(145, 167, 255, 0.5);
+  outline-offset: 3px;
+}
+
+/* Reorganize lobby forms on narrow screens. */
+@media (max-width: 650px) {
+  .online-room-heading {
+    flex-direction: column;
+  }
+
+  .room-entry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .room-entry-grid> :first-child {
+    grid-column: auto;
+  }
+
+  .active-room-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .leave-room-button {
+    width: 100%;
+  }
+}

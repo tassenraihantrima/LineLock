@@ -1110,3 +1110,174 @@ Phase 10 adds:
 ### Next Phase
 
 Phase 11 will use the established Socket.IO connection to create multiplayer rooms, generate room codes, join existing rooms, and manage room membership.
+
+---
+
+## Phase 11 — Online Rooms
+
+### Goal
+
+Use the existing Socket.IO connection to create and join two-player online rooms with real-time lobby membership.
+
+### Work Completed
+
+- Added typed room-creation events.
+- Added typed room-joining events.
+- Added typed room-leaving events.
+- Added acknowledgement responses for room actions.
+- Generated unique six-character room codes.
+- Added an in-memory server room store.
+- Limited rooms to two connected players.
+- Assigned Player 1 and Player 2 positions.
+- Added waiting and ready lobby states.
+- Broadcast room updates to all room members.
+- Added player-name cleanup and length limits.
+- Added room-code normalization.
+- Added invalid-room validation.
+- Added full-room validation.
+- Added manual room leaving.
+- Removed disconnected sockets from rooms.
+- Deleted rooms after the final player left.
+- Added room count information to the health route.
+- Added create-room and join-room interfaces.
+- Added room-code copying.
+- Added real-time player lobby rows.
+- Highlighted the current browser's player position.
+- Preserved the existing connection and latency interface.
+
+### Server Room Storage
+
+Rooms are stored in an in-memory `Map`.
+
+Each room contains:
+
+- A six-character room code
+- Up to two player records
+- Each player's socket ID
+- Each player's display name
+- Each player's assigned position
+
+The room map exists only while the server process is running.
+
+Restarting the server clears all rooms. Database persistence is outside the scope of this phase.
+
+### Room Creation
+
+When a player creates a room:
+
+1. Their name is cleaned and limited to twenty characters.
+2. A unique room code is generated.
+3. A new room record is stored.
+4. The socket joins the Socket.IO room.
+5. The socket becomes Player 1.
+6. The server returns the room through an acknowledgement.
+7. The server broadcasts the room state.
+
+### Room Joining
+
+When a player submits a room code:
+
+1. The room code is trimmed and converted to uppercase.
+2. The server verifies that the room exists.
+3. The server verifies that the room has an open position.
+4. The socket joins the Socket.IO room.
+5. The new member becomes Player 2.
+6. The room changes from waiting to ready.
+7. Both browsers receive the updated room.
+
+### Typed Acknowledgements
+
+Create, join, and leave events include callback responses.
+
+A successful response contains the room state.
+
+A failed response contains a readable validation message.
+
+This lets the requesting browser display errors without creating separate global error events.
+
+### Membership Updates
+
+The server broadcasts `room:updated` whenever:
+
+- A room is created
+- A second player joins
+- A player leaves
+- A player disconnects
+
+Every connected member therefore receives the same lobby state.
+
+### Disconnection Cleanup
+
+When a socket disconnects:
+
+- It is removed from the server room record.
+- Remaining players receive an updated lobby.
+- The remaining player becomes Player 1.
+- Empty rooms are removed from memory.
+
+Full reconnection recovery is intentionally reserved for Phase 13.
+
+### Room Security and Validation
+
+Phase 11 includes basic validation:
+
+- Room codes are normalized.
+- Unknown rooms are rejected.
+- Full rooms reject additional players.
+- Names are trimmed.
+- Empty names use a default.
+- Names are limited to twenty characters.
+
+Authentication and permanent player identity will be introduced later.
+
+### Accessibility
+
+The room interface includes:
+
+- Explicit player-name and room-code labels
+- Keyboard-accessible room controls
+- Live room-status messages
+- Text-based waiting and ready states
+- Visible focus styling
+- Disabled action states
+- Player-position labels
+
+### Technologies Practiced
+
+- Socket.IO rooms
+- Typed event acknowledgements
+- In-memory server state
+- Real-time lobby synchronization
+- Server-side validation
+- Room-code generation
+- Socket membership
+- Disconnect cleanup
+- Controlled React forms
+- Browser clipboard access
+- Responsive lobby design
+
+### Testing Completed
+
+- Confirmed a player can create a room.
+- Confirmed every new room receives a code.
+- Confirmed the creator becomes Player 1.
+- Confirmed a second browser can join.
+- Confirmed the joining browser becomes Player 2.
+- Confirmed both browsers receive matching room state.
+- Confirmed the room changes from waiting to ready.
+- Confirmed invalid room codes are rejected.
+- Confirmed a third player cannot join a full room.
+- Confirmed Player 2 can leave manually.
+- Confirmed the remaining browser returns to waiting.
+- Confirmed closing a player tab updates the room.
+- Confirmed empty rooms are deleted.
+- Confirmed the health route reports active rooms.
+- Confirmed existing ping and latency testing still works.
+- Confirmed local gameplay still works.
+- Confirmed client linting succeeds.
+- Confirmed the client production build succeeds.
+- Confirmed server TypeScript checking succeeds.
+
+### Next Phase
+
+Phase 12 will create the online game state on the server, validate online moves, synchronize the board between both players, and prevent clients from controlling authoritative gameplay data.

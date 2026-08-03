@@ -65,7 +65,7 @@ function AppLayout() {
                 </nav>
 
                 <span className="phase-badge">
-                    Phase 10
+                    Phase 11
                 </span>
             </header>
 
