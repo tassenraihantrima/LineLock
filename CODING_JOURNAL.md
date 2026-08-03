@@ -946,3 +946,167 @@ Phase 9 adds:
 ### Next Phase
 
 Phase 10 will connect the React client to the Socket.IO server and establish the first real-time client-server communication.
+
+---
+
+## Phase 10 — Socket.IO Integration
+
+### Goal
+
+Connect the React client to the LineLock Socket.IO server and verify typed, bidirectional real-time communication.
+
+### Work Completed
+
+- Installed the Socket.IO client package.
+- Created a reusable typed socket instance.
+- Disabled automatic connection until the online page is opened.
+- Added typed client-to-server events.
+- Added typed server-to-client events.
+- Connected the online route to the backend server.
+- Added server connection confirmation.
+- Displayed the Socket.IO connection status.
+- Displayed the connected socket ID.
+- Displayed the server connection time.
+- Added client-to-server ping events.
+- Added server-to-client pong events.
+- Calculated browser-to-server round-trip latency.
+- Added connection-error feedback.
+- Added manual reconnection controls.
+- Disconnected the socket when leaving the online route.
+- Preserved all local-game functionality.
+- Added responsive and accessible connection-status components.
+
+### Connection Lifecycle
+
+The Socket.IO client is created with automatic connection disabled.
+
+The online page controls the lifecycle:
+
+1. Register Socket.IO event listeners.
+2. Open the connection when the route mounts.
+3. Receive a server confirmation event.
+4. Display the connection state and socket ID.
+5. Remove listeners when the route unmounts.
+6. Disconnect when the user leaves the online page.
+
+This prevents the application from keeping an unnecessary multiplayer connection open while the user is playing locally.
+
+### Typed Events
+
+The integration defines separate event interfaces for each direction.
+
+Client-to-server:
+
+- `client:ping`
+
+Server-to-client:
+
+- `server:connection-ready`
+- `server:pong`
+
+The Socket.IO generic types connect event names to their expected payloads.
+
+TypeScript can therefore detect:
+
+- Incorrect event names
+- Missing payload properties
+- Incorrect payload value types
+- Incorrect listener parameter types
+
+### Connection Confirmation
+
+When a browser connects, the server emits a connection-ready event containing:
+
+- The assigned socket ID
+- A confirmation message
+- The connection timestamp
+
+The online page stores and displays this information.
+
+### Ping and Pong Test
+
+The browser emits a ping containing its current timestamp.
+
+The server returns:
+
+- The original browser timestamp
+- The time the server received the event
+
+The client subtracts the original timestamp from its current time to estimate the complete round-trip latency.
+
+This confirms communication in both directions before multiplayer room logic is introduced.
+
+### Connection Cleanup
+
+When the online route is left:
+
+- Event listeners are removed.
+- The socket disconnects.
+- The server receives a disconnect event.
+- The local route continues without an unnecessary network connection.
+
+Returning to the online route creates a new connection and socket ID.
+
+### Error Handling
+
+Connection errors are displayed inside the online interface instead of crashing the application.
+
+The user can manually retry a failed or closed connection.
+
+The server also logs Engine.IO connection errors for backend debugging.
+
+### CORS
+
+The server accepts the two common Vite development origins:
+
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
+
+Both Express and Socket.IO use the same allowed-origin list.
+
+### Accessibility
+
+Phase 10 adds:
+
+- Polite live connection-status announcements
+- Readable connection-error messages
+- Keyboard-accessible ping and reconnect controls
+- Visible focus states
+- Text labels in addition to colored status indicators
+- Disabled states while actions are unavailable
+
+### Technologies Practiced
+
+- Socket.IO
+- WebSocket-style event communication
+- Typed real-time events
+- React effect cleanup
+- Connection lifecycle management
+- Client-server event contracts
+- CORS configuration
+- Latency measurement
+- Error and reconnection handling
+- Accessible real-time status interfaces
+
+### Testing Completed
+
+- Confirmed the Express health route responds.
+- Confirmed the React client connects to Socket.IO.
+- Confirmed the server logs the connected socket ID.
+- Confirmed the browser displays the same socket ID.
+- Confirmed the server sends connection confirmation.
+- Confirmed the client sends a ping event.
+- Confirmed the server returns a pong event.
+- Confirmed round-trip latency is displayed.
+- Confirmed leaving the online route disconnects the socket.
+- Confirmed returning creates a new connection.
+- Confirmed server shutdown produces a disconnected or error state.
+- Confirmed reconnection works after restarting the server.
+- Confirmed local-game routes continue working.
+- Confirmed client linting succeeds.
+- Confirmed the client production build succeeds.
+- Confirmed server TypeScript checking succeeds.
+
+### Next Phase
+
+Phase 11 will use the established Socket.IO connection to create multiplayer rooms, generate room codes, join existing rooms, and manage room membership.

@@ -10,35 +10,35 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 9 is complete.
+Phase 10 is complete.
 
 The project currently includes:
 
 - A React and TypeScript frontend
 - An Express and TypeScript backend
-- Socket.IO server configuration for future multiplayer support
 - Client-side routing using React Router
-- A shared application layout
-- Active primary navigation
-- A dedicated landing page
-- A dedicated local-game route
-- A dedicated future online-game route
-- A custom not-found route
-- Configurable player names and board sizes
-- Dynamic board generation
-- Interactive horizontal and vertical edges
-- Alternating player turns
-- Completed-box detection and ownership
-- Live score updates
-- Double-box completion support
-- Extra turns after box completion
-- Winner and tie calculation
+- A landing page, local-game route, online route, and not-found route
+- Configurable local player names and board sizes
+- Complete local Dots and Boxes gameplay
+- Alternating turns and player-specific ownership
+- Completed-box detection and live scoring
+- Double-box completion and extra-turn support
+- Winner and tie detection
 - Match restart and setup controls
-- Live gameplay feedback
-- Responsive route layouts
-- Accessible navigation, forms, controls, game elements, and status announcements
+- A typed Socket.IO client
+- A typed Socket.IO server
+- Controlled real-time connection lifecycle
+- Server connection confirmation
+- Socket ID and connection-time display
+- Client-to-server ping events
+- Server-to-client pong events
+- Live round-trip latency measurement
+- Connection-error and reconnection controls
+- Cross-origin support for the Vite client
+- Accessible real-time connection feedback
+- Responsive local and online interfaces
 
-The client will connect to the Socket.IO server in Phase 10.
+Online room creation and joining will be implemented in Phase 11.
 
 ---
 
@@ -177,7 +177,7 @@ This starts:
 - ✅ Phase 7 – Game Completion
 - ✅ Phase 8 – Local Game Polish
 - ✅ Phase 9 – Application Routing
-- ⬜ Phase 10 – Socket.IO Integration
+- ✅ Phase 10 – Socket.IO Integration
 - ⬜ Phase 11 – Online Rooms
 - ⬜ Phase 12 – Server-Controlled Game State
 - ⬜ Phase 13 – Reconnection Handling
