@@ -12,8 +12,11 @@ dotenv.config({
   quiet: true,
 });
 
-// Identify the two positions available inside a room.
-type OnlinePlayerNumber = 1 | 2;
+// Identify both online player positions.
+type PlayerNumber = 1 | 2;
+
+// Represent every possible edge direction.
+type EdgeOrientation = "horizontal" | "vertical";
 
 // Describe the data sent when the server accepts a connection.
 type ConnectionReadyPayload = {
@@ -33,18 +36,65 @@ type PongPayload = {
   receivedAt: number;
 };
 
-// Describe one player stored inside a room.
+// Describe one server-controlled player.
+type ServerPlayer = {
+  number: PlayerNumber;
+  name: string;
+  score: number;
+};
+
+// Describe one server-controlled board edge.
+type ServerEdge = {
+  id: string;
+  orientation: EdgeOrientation;
+  row: number;
+  column: number;
+  claimedBy: PlayerNumber | null;
+};
+
+// Describe one server-controlled box.
+type ServerBox = {
+  id: string;
+  row: number;
+  column: number;
+  claimedBy: PlayerNumber | null;
+};
+
+// Describe the complete authoritative online game state.
+type ServerGameState = {
+  boardSize: number;
+  players: [ServerPlayer, ServerPlayer];
+  edges: ServerEdge[];
+  boxes: ServerBox[];
+  currentPlayer: PlayerNumber;
+  status: "playing";
+  moveCount: number;
+};
+
+// Describe one player stored inside an online room.
 type OnlineRoomPlayer = {
   socketId: string;
   name: string;
-  playerNumber: OnlinePlayerNumber;
+  playerNumber: PlayerNumber;
 };
 
-// Describe the public room state sent to browsers.
+// Describe the public room sent to connected browsers.
 type OnlineRoom = {
   roomCode: string;
-  status: "waiting" | "ready";
+  status:
+  | "waiting"
+  | "ready"
+  | "playing"
+  | "complete";
   players: OnlineRoomPlayer[];
+  gameState: ServerGameState | null;
+};
+
+// Describe the server's internal room record.
+type RoomRecord = {
+  roomCode: string;
+  players: OnlineRoomPlayer[];
+  gameState: ServerGameState | null;
 };
 
 // Describe the information required to create a room.
@@ -58,7 +108,12 @@ type JoinRoomPayload = {
   playerName: string;
 };
 
-// Return either the current room or a readable validation error.
+// Describe one requested online move.
+type OnlineMovePayload = {
+  edgeId: string;
+};
+
+// Return either the current room or a readable error.
 type RoomActionResponse =
   | {
     success: true;
@@ -68,12 +123,6 @@ type RoomActionResponse =
     success: false;
     message: string;
   };
-
-// Store each room inside the server process.
-type RoomRecord = {
-  roomCode: string;
-  players: OnlineRoomPlayer[];
-};
 
 // Events the server sends to connected clients.
 interface ServerToClientEvents {
@@ -86,6 +135,10 @@ interface ServerToClientEvents {
   ) => void;
 
   "room:updated": (
+    room: OnlineRoom,
+  ) => void;
+
+  "game:updated": (
     room: OnlineRoom,
   ) => void;
 }
@@ -109,38 +162,43 @@ interface ClientToServerEvents {
   "room:leave": (
     callback: (response: RoomActionResponse) => void,
   ) => void;
+
+  "game:start": (
+    callback: (response: RoomActionResponse) => void,
+  ) => void;
+
+  "game:move": (
+    payload: OnlineMovePayload,
+    callback: (response: RoomActionResponse) => void,
+  ) => void;
 }
 
-// No inter-server events are required during local development.
+// No communication between multiple server processes is required yet.
 interface InterServerEvents { }
 
-// Store room membership directly on each connected socket.
+// Store room membership on each connected socket.
 interface SocketData {
   roomCode?: string;
   playerName?: string;
-  playerNumber?: OnlinePlayerNumber;
+  playerNumber?: PlayerNumber;
 }
 
-// Create the Express application used for normal HTTP routes.
+// Create the Express application.
 const app = express();
 
-// Create one HTTP server shared by Express and Socket.IO.
+// Allow Express and Socket.IO to share one HTTP server.
 const httpServer = createServer(app);
 
 // Use a deployment port when available.
-// Otherwise, use port 3001 during local development.
 const PORT = Number(process.env.PORT) || 3001;
 
-// Accept requests from either common Vite development address.
+// Accept both common Vite development addresses.
 const allowedClientOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];
 
-// Store active rooms in memory.
-//
-// Restarting the server clears these rooms. Persistent rooms and
-// database storage are intentionally outside Phase 11.
+// Store rooms inside the running server process.
 const rooms = new Map<string, RoomRecord>();
 
 // Allow the React application to access Express routes.
@@ -150,10 +208,10 @@ app.use(
   }),
 );
 
-// Allow Express to read JSON request bodies.
+// Allow Express to read JSON bodies.
 app.use(express.json());
 
-// Create a typed Socket.IO server using the same HTTP server.
+// Create the typed Socket.IO server.
 const io = new Server<
   ClientToServerEvents,
   ServerToClientEvents,
@@ -166,21 +224,19 @@ const io = new Server<
   },
 });
 
-// Remove surrounding whitespace and limit room names to 20 characters.
+// Remove extra whitespace and limit player names.
 function cleanPlayerName(playerName: string): string {
   const cleanedName = playerName.trim().slice(0, 20);
 
   return cleanedName || "Player";
 }
 
-// Normalize room codes before searching the room map.
+// Normalize room codes before searching.
 function cleanRoomCode(roomCode: string): string {
   return roomCode.trim().toUpperCase();
 }
 
-// Generate a readable six-character room code.
-//
-// Characters that are easily confused, such as O and 0, are excluded.
+// Generate a unique six-character room code.
 function generateRoomCode(): string {
   const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -199,29 +255,343 @@ function generateRoomCode(): string {
   return roomCode;
 }
 
-// Convert the internal room record into the public room structure.
-function createRoomSummary(room: RoomRecord): OnlineRoom {
+// Generate every horizontal edge on the board.
+function createHorizontalEdges(
+  boardSize: number,
+): ServerEdge[] {
+  const edges: ServerEdge[] = [];
+
+  for (let row = 0; row < boardSize; row += 1) {
+    for (
+      let column = 0;
+      column < boardSize - 1;
+      column += 1
+    ) {
+      edges.push({
+        id: `horizontal-${row}-${column}`,
+        orientation: "horizontal",
+        row,
+        column,
+        claimedBy: null,
+      });
+    }
+  }
+
+  return edges;
+}
+
+// Generate every vertical edge on the board.
+function createVerticalEdges(
+  boardSize: number,
+): ServerEdge[] {
+  const edges: ServerEdge[] = [];
+
+  for (
+    let row = 0;
+    row < boardSize - 1;
+    row += 1
+  ) {
+    for (
+      let column = 0;
+      column < boardSize;
+      column += 1
+    ) {
+      edges.push({
+        id: `vertical-${row}-${column}`,
+        orientation: "vertical",
+        row,
+        column,
+        claimedBy: null,
+      });
+    }
+  }
+
+  return edges;
+}
+
+// Generate every possible box on the board.
+function createBoxes(
+  boardSize: number,
+): ServerBox[] {
+  const boxes: ServerBox[] = [];
+
+  for (
+    let row = 0;
+    row < boardSize - 1;
+    row += 1
+  ) {
+    for (
+      let column = 0;
+      column < boardSize - 1;
+      column += 1
+    ) {
+      boxes.push({
+        id: `box-${row}-${column}`,
+        row,
+        column,
+        claimedBy: null,
+      });
+    }
+  }
+
+  return boxes;
+}
+
+// Create a new server-controlled five-by-five game.
+function createServerGameState(
+  playerOneName: string,
+  playerTwoName: string,
+): ServerGameState {
+  const boardSize = 5;
+
   return {
-    roomCode: room.roomCode,
-    status:
-      room.players.length === 2
-        ? "ready"
-        : "waiting",
-    players: room.players.map((player) => ({
-      ...player,
-    })),
+    boardSize,
+    players: [
+      {
+        number: 1,
+        name: playerOneName,
+        score: 0,
+      },
+      {
+        number: 2,
+        name: playerTwoName,
+        score: 0,
+      },
+    ],
+    edges: [
+      ...createHorizontalEdges(boardSize),
+      ...createVerticalEdges(boardSize),
+    ],
+    boxes: createBoxes(boardSize),
+    currentPlayer: 1,
+    status: "playing",
+    moveCount: 0,
   };
 }
 
-// Send the newest room state to every connected room member.
-function broadcastRoomUpdate(room: RoomRecord): void {
+// Find an edge using its orientation and coordinates.
+function findEdge(
+  edges: ServerEdge[],
+  orientation: EdgeOrientation,
+  row: number,
+  column: number,
+): ServerEdge | undefined {
+  return edges.find(
+    (edge) =>
+      edge.orientation === orientation &&
+      edge.row === row &&
+      edge.column === column,
+  );
+}
+
+// Determine whether one box has four claimed edges.
+function isBoxComplete(
+  box: ServerBox,
+  edges: ServerEdge[],
+): boolean {
+  const topEdge = findEdge(
+    edges,
+    "horizontal",
+    box.row,
+    box.column,
+  );
+
+  const bottomEdge = findEdge(
+    edges,
+    "horizontal",
+    box.row + 1,
+    box.column,
+  );
+
+  const leftEdge = findEdge(
+    edges,
+    "vertical",
+    box.row,
+    box.column,
+  );
+
+  const rightEdge = findEdge(
+    edges,
+    "vertical",
+    box.row,
+    box.column + 1,
+  );
+
+  return (
+    topEdge?.claimedBy !== null &&
+    bottomEdge?.claimedBy !== null &&
+    leftEdge?.claimedBy !== null &&
+    rightEdge?.claimedBy !== null
+  );
+}
+
+// Return the player who should act after a normal move.
+function getOtherPlayer(
+  currentPlayer: PlayerNumber,
+): PlayerNumber {
+  return currentPlayer === 1 ? 2 : 1;
+}
+
+// Determine whether every online edge has been claimed.
+function isServerGameComplete(
+  gameState: ServerGameState,
+): boolean {
+  return (
+    gameState.moveCount >= gameState.edges.length
+  );
+}
+
+// Apply one valid edge claim to the authoritative state.
+function applyServerMove(
+  gameState: ServerGameState,
+  edgeId: string,
+  movingPlayer: PlayerNumber,
+): ServerGameState {
+  // Assign the selected edge to the moving player.
+  const updatedEdges = gameState.edges.map((edge) => {
+    if (edge.id !== edgeId) {
+      return edge;
+    }
+
+    return {
+      ...edge,
+      claimedBy: movingPlayer,
+    };
+  });
+
+  // Find every newly completed box.
+  const newlyCompletedBoxIds = gameState.boxes
+    .filter(
+      (box) =>
+        box.claimedBy === null &&
+        isBoxComplete(box, updatedEdges),
+    )
+    .map((box) => box.id);
+
+  // Assign newly completed boxes to the moving player.
+  const updatedBoxes = gameState.boxes.map((box) => {
+    if (!newlyCompletedBoxIds.includes(box.id)) {
+      return box;
+    }
+
+    return {
+      ...box,
+      claimedBy: movingPlayer,
+    };
+  });
+
+  const completedBoxCount =
+    newlyCompletedBoxIds.length;
+
+  // Preserve the required two-player tuple.
+  const updatedPlayers: [
+    ServerPlayer,
+    ServerPlayer,
+  ] = [
+      gameState.players[0].number === movingPlayer
+        ? {
+          ...gameState.players[0],
+          score:
+            gameState.players[0].score +
+            completedBoxCount,
+        }
+        : gameState.players[0],
+
+      gameState.players[1].number === movingPlayer
+        ? {
+          ...gameState.players[1],
+          score:
+            gameState.players[1].score +
+            completedBoxCount,
+        }
+        : gameState.players[1],
+    ];
+
+  // A completed box grants another move.
+  const nextPlayer =
+    completedBoxCount > 0
+      ? movingPlayer
+      : getOtherPlayer(movingPlayer);
+
+  return {
+    ...gameState,
+    edges: updatedEdges,
+    boxes: updatedBoxes,
+    players: updatedPlayers,
+    currentPlayer: nextPlayer,
+    moveCount: gameState.moveCount + 1,
+  };
+}
+
+// Convert the internal room record into public room data.
+function createRoomSummary(
+  room: RoomRecord,
+): OnlineRoom {
+  const gameIsComplete =
+    room.gameState !== null &&
+    isServerGameComplete(room.gameState);
+
+  let status: OnlineRoom["status"];
+
+  if (room.players.length < 2) {
+    status = "waiting";
+  } else if (!room.gameState) {
+    status = "ready";
+  } else if (gameIsComplete) {
+    status = "complete";
+  } else {
+    status = "playing";
+  }
+
+  return {
+    roomCode: room.roomCode,
+    status,
+    players: room.players.map((player) => ({
+      ...player,
+    })),
+    gameState: room.gameState
+      ? {
+        ...room.gameState,
+        players: [
+          {
+            ...room.gameState.players[0],
+          },
+          {
+            ...room.gameState.players[1],
+          },
+        ],
+        edges: room.gameState.edges.map((edge) => ({
+          ...edge,
+        })),
+        boxes: room.gameState.boxes.map((box) => ({
+          ...box,
+        })),
+      }
+      : null,
+  };
+}
+
+// Broadcast lobby membership changes.
+function broadcastRoomUpdate(
+  room: RoomRecord,
+): void {
   io.to(room.roomCode).emit(
     "room:updated",
     createRoomSummary(room),
   );
 }
 
-// Remove a socket from its current room and update remaining members.
+// Broadcast authoritative gameplay changes.
+function broadcastGameUpdate(
+  room: RoomRecord,
+): void {
+  io.to(room.roomCode).emit(
+    "game:updated",
+    createRoomSummary(room),
+  );
+}
+
+// Remove a socket from its current room.
 function removeSocketFromRoom(
   socket: Socket<
     ClientToServerEvents,
@@ -238,8 +608,8 @@ function removeSocketFromRoom(
 
   const room = rooms.get(roomCode);
 
-  // Clear socket membership even if the room no longer exists.
   socket.leave(roomCode);
+
   socket.data.roomCode = undefined;
   socket.data.playerName = undefined;
   socket.data.playerNumber = undefined;
@@ -248,12 +618,11 @@ function removeSocketFromRoom(
     return null;
   }
 
-  // Remove the leaving socket from the room's player list.
   room.players = room.players.filter(
     (player) => player.socketId !== socket.id,
   );
 
-  // Delete completely empty rooms.
+  // Delete rooms after their final player leaves.
   if (room.players.length === 0) {
     rooms.delete(roomCode);
 
@@ -263,28 +632,40 @@ function removeSocketFromRoom(
       roomCode,
       status: "waiting",
       players: [],
+      gameState: null,
     };
   }
 
-  // The remaining player becomes Player 1.
+  // A multiplayer game cannot continue with one player.
+  room.gameState = null;
+
+  // The remaining member becomes Player 1.
   room.players = room.players.map((player, index) => ({
     ...player,
-    playerNumber: (index + 1) as OnlinePlayerNumber,
+    playerNumber: (index + 1) as PlayerNumber,
   }));
+
+  const remainingSocket = io.sockets.sockets.get(
+    room.players[0].socketId,
+  );
+
+  if (remainingSocket) {
+    remainingSocket.data.playerNumber = 1;
+  }
 
   broadcastRoomUpdate(room);
 
   return createRoomSummary(room);
 }
 
-// Confirm that the regular Express server is running.
+// Confirm that the Express server is running.
 app.get("/", (_request, response) => {
   response.json({
     message: "LineLock server is running.",
   });
 });
 
-// Provide a health route for local testing and future deployment.
+// Provide server-health and room-count information.
 app.get("/api/health", (_request, response) => {
   response.status(200).json({
     status: "ok",
@@ -294,11 +675,11 @@ app.get("/api/health", (_request, response) => {
   });
 });
 
-// Run whenever a browser establishes a Socket.IO connection.
+// Handle every connected browser.
 io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
 
-  // Immediately confirm the connection to the browser.
+  // Confirm the connection immediately.
   socket.emit("server:connection-ready", {
     socketId: socket.id,
     message:
@@ -306,7 +687,7 @@ io.on("connection", (socket) => {
     connectedAt: new Date().toISOString(),
   });
 
-  // Respond whenever the client sends a latency test.
+  // Respond to latency tests.
   socket.on("client:ping", (payload) => {
     socket.emit("server:pong", {
       sentAt: payload.sentAt,
@@ -314,11 +695,10 @@ io.on("connection", (socket) => {
     });
   });
 
-  // Create a new room and make the requesting socket Player 1.
+  // Create a new multiplayer room.
   socket.on(
     "room:create",
     (payload, callback) => {
-      // Leave any previous room before creating a new one.
       removeSocketFromRoom(socket);
 
       const playerName = cleanPlayerName(
@@ -336,6 +716,7 @@ io.on("connection", (socket) => {
             playerNumber: 1,
           },
         ],
+        gameState: null,
       };
 
       rooms.set(roomCode, room);
@@ -394,16 +775,13 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // Leave a different room before joining this one.
       removeSocketFromRoom(socket);
 
-      const roomPlayer: OnlineRoomPlayer = {
+      room.players.push({
         socketId: socket.id,
         name: playerName,
         playerNumber: 2,
-      };
-
-      room.players.push(roomPlayer);
+      });
 
       socket.join(roomCode);
       socket.data.roomCode = roomCode;
@@ -425,9 +803,10 @@ io.on("connection", (socket) => {
     },
   );
 
-  // Allow the current socket to leave its room manually.
+  // Allow a player to leave manually.
   socket.on("room:leave", (callback) => {
-    const previousRoomCode = socket.data.roomCode;
+    const previousRoomCode =
+      socket.data.roomCode;
 
     if (!previousRoomCode) {
       callback({
@@ -453,13 +832,192 @@ io.on("connection", (socket) => {
           roomCode: previousRoomCode,
           status: "waiting",
           players: [],
+          gameState: null,
         },
     });
   });
 
-  // Remove disconnected players from the in-memory room state.
+  // Start a new authoritative game.
+  socket.on("game:start", (callback) => {
+    const roomCode = socket.data.roomCode;
+
+    if (!roomCode) {
+      callback({
+        success: false,
+        message:
+          "Join a room before starting a game.",
+      });
+
+      return;
+    }
+
+    const room = rooms.get(roomCode);
+
+    if (!room) {
+      callback({
+        success: false,
+        message:
+          "The current room no longer exists.",
+      });
+
+      return;
+    }
+
+    if (room.players.length !== 2) {
+      callback({
+        success: false,
+        message:
+          "Two players must be connected before the game can start.",
+      });
+
+      return;
+    }
+
+    if (socket.data.playerNumber !== 1) {
+      callback({
+        success: false,
+        message:
+          "Only Player 1 can start the online match.",
+      });
+
+      return;
+    }
+
+    const playerOne = room.players.find(
+      (player) => player.playerNumber === 1,
+    );
+
+    const playerTwo = room.players.find(
+      (player) => player.playerNumber === 2,
+    );
+
+    if (!playerOne || !playerTwo) {
+      callback({
+        success: false,
+        message:
+          "Both player positions must be available.",
+      });
+
+      return;
+    }
+
+    room.gameState = createServerGameState(
+      playerOne.name,
+      playerTwo.name,
+    );
+
+    const roomSummary = createRoomSummary(room);
+
+    console.log(
+      `Online game started in room ${roomCode}`,
+    );
+
+    callback({
+      success: true,
+      room: roomSummary,
+    });
+
+    broadcastGameUpdate(room);
+  });
+
+  // Validate and apply one online edge move.
+  socket.on(
+    "game:move",
+    (payload, callback) => {
+      const roomCode = socket.data.roomCode;
+      const playerNumber =
+        socket.data.playerNumber;
+
+      if (!roomCode || !playerNumber) {
+        callback({
+          success: false,
+          message:
+            "Join a room before making a move.",
+        });
+
+        return;
+      }
+
+      const room = rooms.get(roomCode);
+
+      if (!room || !room.gameState) {
+        callback({
+          success: false,
+          message:
+            "The online game has not started.",
+        });
+
+        return;
+      }
+
+      if (isServerGameComplete(room.gameState)) {
+        callback({
+          success: false,
+          message:
+            "The online game is already complete.",
+        });
+
+        return;
+      }
+
+      if (
+        room.gameState.currentPlayer !== playerNumber
+      ) {
+        callback({
+          success: false,
+          message:
+            "Wait for your turn before claiming an edge.",
+        });
+
+        return;
+      }
+
+      const selectedEdge =
+        room.gameState.edges.find(
+          (edge) => edge.id === payload.edgeId,
+        );
+
+      if (!selectedEdge) {
+        callback({
+          success: false,
+          message:
+            "The selected edge does not exist.",
+        });
+
+        return;
+      }
+
+      if (selectedEdge.claimedBy !== null) {
+        callback({
+          success: false,
+          message:
+            "That edge has already been claimed.",
+        });
+
+        return;
+      }
+
+      room.gameState = applyServerMove(
+        room.gameState,
+        payload.edgeId,
+        playerNumber,
+      );
+
+      const roomSummary = createRoomSummary(room);
+
+      callback({
+        success: true,
+        room: roomSummary,
+      });
+
+      broadcastGameUpdate(room);
+    },
+  );
+
+  // Remove disconnected players from rooms.
   socket.on("disconnect", (reason) => {
-    const previousRoomCode = socket.data.roomCode;
+    const previousRoomCode =
+      socket.data.roomCode;
 
     removeSocketFromRoom(socket);
 
@@ -475,14 +1033,14 @@ io.on("connection", (socket) => {
   });
 });
 
-// Log server-level connection errors for easier debugging.
+// Log low-level connection errors.
 io.engine.on("connection_error", (error) => {
   console.error(
     `Socket.IO connection error: ${error.message}`,
   );
 });
 
-// Start Express and Socket.IO on the local loopback address.
+// Start Express and Socket.IO.
 httpServer.listen(PORT, "127.0.0.1", () => {
   console.log(
     `LineLock server is running at http://127.0.0.1:${PORT}`,

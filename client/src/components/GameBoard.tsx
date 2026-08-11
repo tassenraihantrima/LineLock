@@ -8,6 +8,7 @@ import type {
 type GameBoardProps = {
     gameState: GameState;
     isGameComplete: boolean;
+    isInteractionDisabled?: boolean;
     onEdgeClick: (edgeId: string) => void;
 };
 
@@ -85,6 +86,7 @@ function createClaimedBoxClass(
 function GameBoard({
     gameState,
     isGameComplete,
+    isInteractionDisabled = false,
     onEdgeClick,
 }: GameBoardProps) {
     // The rendered grid alternates between dots, edges, and boxes.
@@ -186,7 +188,8 @@ function GameBoard({
                                     disabled={
                                         !edge ||
                                         edgeIsClaimed ||
-                                        isGameComplete
+                                        isGameComplete ||
+                                        isInteractionDisabled
                                     }
                                     aria-pressed={edgeIsClaimed}
                                     aria-label={`Horizontal edge at row ${position.row / 2 + 1
@@ -198,7 +201,7 @@ function GameBoard({
                                                 : ", available"
                                         }`}
                                     onClick={() => {
-                                        if (edge && !isGameComplete) {
+                                        if (edge && !isGameComplete && !isInteractionDisabled) {
                                             onEdgeClick(edge.id);
                                         }
                                     }}

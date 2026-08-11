@@ -1281,3 +1281,180 @@ The room interface includes:
 ### Next Phase
 
 Phase 12 will create the online game state on the server, validate online moves, synchronize the board between both players, and prevent clients from controlling authoritative gameplay data.
+
+---
+
+## Phase 12 — Server-Controlled Game State
+
+### Goal
+
+Move authoritative online gameplay from individual browsers to the Socket.IO server and synchronize every valid change between both connected players.
+
+### Work Completed
+
+- Added a server-controlled online game-state model.
+- Added server-side board generation.
+- Added server-side player creation.
+- Added a host-controlled online match start event.
+- Added typed online move events.
+- Added server-side turn validation.
+- Added server-side edge validation.
+- Added server-side duplicate-move prevention.
+- Added server-side completed-box detection.
+- Added server-controlled score updates.
+- Added server-controlled extra turns.
+- Added double-box completion support.
+- Added server-side game-completion detection.
+- Broadcast authoritative game updates to both room members.
+- Reused the existing game-board component for online play.
+- Disabled online board interaction when it is not the current browser's turn.
+- Added online winner and tie presentation.
+- Added host-controlled online rematches.
+- Cleared interrupted games when a room member disconnected.
+- Preserved all Phase 11 lobby and connection features.
+
+### Authoritative Server State
+
+The online game state now exists inside the server's room record.
+
+The server stores:
+
+- Board size
+- Both players
+- Player scores
+- Every horizontal edge
+- Every vertical edge
+- Every box
+- Current player
+- Move count
+
+Browsers receive copies of this state but do not modify it directly.
+
+### Online Match Startup
+
+After two players enter a room:
+
+1. The room becomes ready.
+2. Player 1 receives the start control.
+3. Player 1 sends a game-start event.
+4. The server creates a fresh five-by-five game.
+5. The server broadcasts the game to both browsers.
+6. Player 1 receives the first turn.
+
+Player 2 cannot start the game.
+
+### Online Move Process
+
+When a browser selects an edge:
+
+1. The browser sends only the edge ID.
+2. The server identifies the socket's room.
+3. The server identifies the socket's player number.
+4. The server verifies that a game exists.
+5. The server verifies that the game is not complete.
+6. The server verifies that it is that player's turn.
+7. The server verifies that the edge exists.
+8. The server verifies that the edge is unclaimed.
+9. The server applies the move.
+10. The server detects newly completed boxes.
+11. The server updates scores and the current player.
+12. The server broadcasts the new game state.
+
+The requesting browser never decides whether its own move is valid.
+
+### Server-Side Box Detection
+
+Each box is checked against four server-owned edges:
+
+- Top horizontal edge
+- Bottom horizontal edge
+- Left vertical edge
+- Right vertical edge
+
+Only previously unclaimed boxes can be newly awarded.
+
+A single edge can complete one or two boxes.
+
+### Online Turn Management
+
+A normal move passes control to the other player.
+
+Completing at least one box keeps control with the moving player.
+
+Both browsers receive the same current-player value from the server.
+
+### Client Interaction Control
+
+The client compares:
+
+- Its socket-assigned player number
+- The server-controlled current player
+- The game-completion state
+
+The board is interactive only when all three conditions allow a move.
+
+Server validation remains active even if client-side controls are bypassed.
+
+### Online Completion
+
+The match ends when every server-owned edge has been claimed.
+
+The client then displays:
+
+- Both final scores
+- The winner or tie
+- All completed boxes
+- A completed room status
+
+Player 1 can request a new match while keeping the room and both connected players.
+
+### Interrupted Matches
+
+When either player leaves or disconnects during an active game:
+
+- The server removes that room member.
+- The game state is cleared.
+- The room returns to waiting.
+- The remaining member becomes Player 1.
+
+Preserving an interrupted match is reserved for Phase 13.
+
+### Technologies Practiced
+
+- Authoritative multiplayer architecture
+- Server-side game state
+- Typed multiplayer events
+- Server-side validation
+- Real-time state broadcasting
+- Room-scoped game updates
+- Shared UI components
+- Client interaction gating
+- Online turn synchronization
+- Defensive multiplayer programming
+
+### Testing Completed
+
+- Confirmed Player 1 can start a ready room.
+- Confirmed Player 2 cannot start the room.
+- Confirmed both browsers receive the same initial board.
+- Confirmed Player 1 receives the first turn.
+- Confirmed valid moves appear in both browsers.
+- Confirmed ownership colors match in both browsers.
+- Confirmed out-of-turn moves are rejected.
+- Confirmed duplicate moves are rejected.
+- Confirmed box ownership synchronizes.
+- Confirmed scores synchronize.
+- Confirmed extra turns synchronize.
+- Confirmed double-box moves award two points.
+- Confirmed game completion appears in both browsers.
+- Confirmed winner and tie results match.
+- Confirmed online rematches reset both browsers.
+- Confirmed player disconnection clears the interrupted game.
+- Confirmed local gameplay still works.
+- Confirmed client linting succeeds.
+- Confirmed the client production build succeeds.
+- Confirmed server TypeScript checking succeeds.
+
+### Next Phase
+
+Phase 13 will preserve room membership and authoritative game state during temporary disconnects, allow players to rejoin using recovery tokens, and apply reconnection grace periods.

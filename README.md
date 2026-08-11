@@ -10,7 +10,7 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 11 is complete.
+Phase 12 is complete.
 
 The project currently includes:
 
@@ -18,25 +18,29 @@ The project currently includes:
 - An Express and TypeScript backend
 - Client-side routing using React Router
 - Complete configurable local gameplay
-- A typed Socket.IO client and server
-- Controlled real-time connection lifecycle
-- Client-to-server and server-to-client events
-- Live connection and latency information
-- Online room creation
+- Typed Socket.IO client-server communication
+- Online room creation and joining
 - Unique six-character room codes
-- Online room joining
-- Two-player room limits
-- Real-time lobby membership updates
-- Waiting and ready room states
-- Player-position assignment
-- Manual room leaving
-- Automatic disconnect cleanup
-- Empty-room deletion
-- Room validation and acknowledgement errors
-- In-memory room tracking
-- Responsive and accessible online lobby controls
+- Two-player online lobby synchronization
+- Server-created online game state
+- Server-generated edges and boxes
+- Server-side move validation
+- Server-controlled player turns
+- Server-controlled edge ownership
+- Server-side completed-box detection
+- Server-controlled score updates
+- Online extra-turn support
+- Double-box completion support
+- Real-time board synchronization
+- Online winner and tie detection
+- Host-controlled online match startup
+- Online match restart support
+- Rejection of invalid and out-of-turn moves
+- Automatic game cancellation after a player disconnects
+- Responsive and accessible online gameplay interfaces
 
-Server-controlled online gameplay will be implemented in Phase 12.
+Temporary disconnection recovery will be implemented in Phase 13.
+
 ---
 
 ## Planned Features
@@ -176,7 +180,7 @@ This starts:
 - ✅ Phase 9 – Application Routing
 - ✅ Phase 10 – Socket.IO Integration
 - ✅ Phase 11 – Online Rooms
-- ⬜ Phase 12 – Server-Controlled Game State
+- ✅ Phase 12 – Server-Controlled Game State
 - ⬜ Phase 13 – Reconnection Handling
 - ⬜ Phase 14 – Authentication & Database
 - ⬜ Phase 15 – Statistics, Deployment & Documentation

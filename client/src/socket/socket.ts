@@ -2,6 +2,9 @@ import {
     io,
     type Socket,
 } from "socket.io-client";
+import type {
+    GameState,
+} from "../game/gameModels";
 
 // Identify the two player positions inside an online room.
 export type OnlinePlayerNumber = 1 | 2;
@@ -31,11 +34,16 @@ export type OnlineRoomPlayer = {
     playerNumber: OnlinePlayerNumber;
 };
 
-// Describe the current state of an online lobby.
+// Describe the current online room state.
 export type OnlineRoom = {
     roomCode: string;
-    status: "waiting" | "ready";
+    status:
+    | "waiting"
+    | "ready"
+    | "playing"
+    | "complete";
     players: OnlineRoomPlayer[];
+    gameState: GameState | null;
 };
 
 // Describe the information required to create a room.
@@ -49,7 +57,12 @@ export type JoinRoomPayload = {
     playerName: string;
 };
 
-// Return either the updated room or a readable validation error.
+// Describe one requested online edge move.
+export type OnlineMovePayload = {
+    edgeId: string;
+};
+
+// Return either the updated room or a readable error.
 export type RoomActionResponse =
     | {
         success: true;
@@ -73,6 +86,10 @@ interface ServerToClientEvents {
     "room:updated": (
         room: OnlineRoom,
     ) => void;
+
+    "game:updated": (
+        room: OnlineRoom,
+    ) => void;
 }
 
 // Events the React client can send to the Socket.IO server.
@@ -94,17 +111,27 @@ interface ClientToServerEvents {
     "room:leave": (
         callback: (response: RoomActionResponse) => void,
     ) => void;
+
+    "game:start": (
+        callback: (response: RoomActionResponse) => void,
+    ) => void;
+
+    "game:move": (
+        payload: OnlineMovePayload,
+        callback: (response: RoomActionResponse) => void,
+    ) => void;
 }
 
 // Use a deployment URL when one is provided.
-// Fall back to the local LineLock server during development.
+// Fall back to the local server during development.
 const SERVER_URL =
     import.meta.env.VITE_SERVER_URL ??
     "http://127.0.0.1:3001";
 
 // Create one reusable typed Socket.IO client.
+//
 // Automatic connection remains disabled so the online page controls
-// when the browser opens and closes its real-time connection.
+// when the browser opens and closes the connection.
 export const socket: Socket<
     ServerToClientEvents,
     ClientToServerEvents
@@ -112,5 +139,5 @@ export const socket: Socket<
     autoConnect: false,
 });
 
-// Export the URL so the online page can display its destination.
+// Export the URL for the connection-information interface.
 export const socketServerUrl = SERVER_URL;

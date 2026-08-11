@@ -1,8 +1,10 @@
 import {
     useEffect,
     useState,
+    type SubmitEvent,
 } from "react";
 import { Link } from "react-router";
+import GameBoard from "../components/GameBoard";
 import {
     socket,
     socketServerUrl,
@@ -26,7 +28,7 @@ function OnlineGamePage() {
         setConnectionStatus,
     ] = useState<ConnectionStatus>("connecting");
 
-    // Display the unique identifier assigned by Socket.IO.
+    // Display the identifier assigned by Socket.IO.
     const [socketId, setSocketId] = useState<string | null>(
         null,
     );
@@ -36,49 +38,50 @@ function OnlineGamePage() {
         "Opening a real-time connection to the LineLock server.",
     );
 
-    // Store the time when the server confirmed the connection.
+    // Store the server-confirmed connection time.
     const [connectedAt, setConnectedAt] = useState<
         string | null
     >(null);
 
-    // Display the latest measured client-server round trip.
+    // Display the latest round-trip latency.
     const [latency, setLatency] = useState<number | null>(
         null,
     );
 
-    // Record whether a ping request is waiting for a pong.
+    // Record whether a ping is waiting for a response.
     const [pingIsPending, setPingIsPending] = useState(false);
 
-    // Store the player's name before creating or joining a room.
+    // Store the player's lobby name.
     const [playerName, setPlayerName] = useState("");
 
     // Store the room code entered into the join form.
     const [roomCodeInput, setRoomCodeInput] = useState("");
 
-    // Store the room currently joined by this browser.
+    // Store the authoritative room received from the server.
     const [activeRoom, setActiveRoom] =
         useState<OnlineRoom | null>(null);
 
-    // Display room validation and membership messages.
+    // Display lobby, move, and validation information.
     const [roomMessage, setRoomMessage] = useState(
         "Create a room or join one using a code from another player.",
     );
 
-    // Prevent duplicate room requests while waiting for the server.
+    // Prevent duplicate room and game requests.
     const [roomActionIsPending, setRoomActionIsPending] =
         useState(false);
 
     useEffect(() => {
-        // Update the page when the Socket.IO connection opens.
+        // Update the page when the socket connection opens.
         function handleConnect() {
             setConnectionStatus("connected");
             setSocketId(socket.id ?? null);
+
             setServerMessage(
                 "Connected. Waiting for server confirmation.",
             );
         }
 
-        // Clear local room membership when this socket disconnects.
+        // Clear room information after disconnection.
         function handleDisconnect(reason: string) {
             setConnectionStatus("disconnected");
             setSocketId(null);
@@ -97,7 +100,7 @@ function OnlineGamePage() {
             );
         }
 
-        // Display connection errors without crashing the application.
+        // Display connection errors.
         function handleConnectError(error: Error) {
             setConnectionStatus("error");
             setSocketId(null);
@@ -109,7 +112,7 @@ function OnlineGamePage() {
             );
         }
 
-        // Store the typed confirmation sent by the server.
+        // Store the server's connection confirmation.
         function handleConnectionReady(
             payload: ConnectionReadyPayload,
         ) {
@@ -119,26 +122,56 @@ function OnlineGamePage() {
             setConnectedAt(payload.connectedAt);
         }
 
-        // Calculate the complete browser-server-browser round trip.
+        // Calculate browser-server-browser latency.
         function handlePong(payload: PongPayload) {
-            const roundTripTime = Date.now() - payload.sentAt;
-
-            setLatency(roundTripTime);
+            setLatency(Date.now() - payload.sentAt);
             setPingIsPending(false);
         }
 
-        // Receive room changes created by joins, leaves, or disconnects.
+        // Store lobby membership updates.
         function handleRoomUpdated(room: OnlineRoom) {
             setActiveRoom(room);
 
+            if (room.status === "waiting") {
+                setRoomMessage(
+                    "The room is waiting for a second player.",
+                );
+            } else if (room.status === "ready") {
+                setRoomMessage(
+                    "Both players are connected. Player 1 can start the match.",
+                );
+            }
+        }
+
+        // Store authoritative game updates.
+        function handleGameUpdated(room: OnlineRoom) {
+            setActiveRoom(room);
+
+            if (room.status === "complete") {
+                setRoomMessage(
+                    "Every edge has been claimed. The online match is complete.",
+                );
+
+                return;
+            }
+
+            const gameState = room.gameState;
+
+            if (!gameState) {
+                return;
+            }
+
+            const activePlayer = gameState.players.find(
+                (player) =>
+                    player.number === gameState.currentPlayer,
+            );
+
             setRoomMessage(
-                room.status === "ready"
-                    ? "Both players are connected. The room is ready for gameplay."
-                    : "The room is waiting for a second player.",
+                `${activePlayer?.name ?? "The next player"} now has control of the board.`,
             );
         }
 
-        // Register every event before opening the connection.
+        // Register listeners before connecting.
         socket.on("connect", handleConnect);
         socket.on("disconnect", handleDisconnect);
         socket.on("connect_error", handleConnectError);
@@ -150,8 +183,8 @@ function OnlineGamePage() {
 
         socket.on("server:pong", handlePong);
         socket.on("room:updated", handleRoomUpdated);
+        socket.on("game:updated", handleGameUpdated);
 
-        // Open the connection when the online route is displayed.
         if (!socket.connected) {
             setConnectionStatus("connecting");
             socket.connect();
@@ -159,7 +192,7 @@ function OnlineGamePage() {
             handleConnect();
         }
 
-        // Remove listeners and close the connection when leaving the route.
+        // Remove listeners and disconnect when leaving the route.
         return () => {
             socket.off("connect", handleConnect);
             socket.off("disconnect", handleDisconnect);
@@ -172,12 +205,13 @@ function OnlineGamePage() {
 
             socket.off("server:pong", handlePong);
             socket.off("room:updated", handleRoomUpdated);
+            socket.off("game:updated", handleGameUpdated);
 
             socket.disconnect();
         };
     }, []);
 
-    // Send the current timestamp to test real-time communication.
+    // Test bidirectional real-time communication.
     function handlePingServer() {
         if (!socket.connected) {
             setServerMessage(
@@ -194,7 +228,7 @@ function OnlineGamePage() {
         });
     }
 
-    // Manually retry after a failed or closed connection.
+    // Retry a failed connection.
     function handleReconnect() {
         if (socket.connected) {
             return;
@@ -209,7 +243,7 @@ function OnlineGamePage() {
         socket.connect();
     }
 
-    // Create a room and become its first player.
+    // Create a new room.
     function handleCreateRoom() {
         if (!socket.connected) {
             setRoomMessage(
@@ -245,9 +279,9 @@ function OnlineGamePage() {
         );
     }
 
-    // Join the room matching the submitted code.
+    // Join an existing room.
     function handleJoinRoom(
-        event: React.FormEvent<HTMLFormElement>,
+        event: SubmitEvent<HTMLFormElement>,
     ) {
         event.preventDefault();
 
@@ -281,14 +315,14 @@ function OnlineGamePage() {
 
                 setRoomMessage(
                     response.room.status === "ready"
-                        ? "Room joined. Both players are ready."
+                        ? "Room joined. Player 1 can start the match."
                         : "Room joined. Waiting for another player.",
                 );
             },
         );
     }
 
-    // Leave the current room while keeping the server connection open.
+    // Leave the current room.
     function handleLeaveRoom() {
         if (!socket.connected || !activeRoom) {
             return;
@@ -317,7 +351,7 @@ function OnlineGamePage() {
         );
     }
 
-    // Copy the active room code using the browser clipboard API.
+    // Copy the active room code.
     async function handleCopyRoomCode() {
         if (!activeRoom) {
             return;
@@ -338,7 +372,58 @@ function OnlineGamePage() {
         }
     }
 
-    // Select a readable status label for the interface.
+    // Ask the server to create a fresh online game.
+    function handleStartOnlineGame() {
+        if (!socket.connected || !activeRoom) {
+            return;
+        }
+
+        setRoomActionIsPending(true);
+
+        socket.emit(
+            "game:start",
+            (response: RoomActionResponse) => {
+                setRoomActionIsPending(false);
+
+                if ("message" in response) {
+                    setRoomMessage(response.message);
+
+                    return;
+                }
+
+                setActiveRoom(response.room);
+                setRoomMessage(
+                    `${response.room.gameState?.players[0].name ?? "Player 1"} begins the online match.`,
+                );
+            },
+        );
+    }
+
+    // Send an edge request without changing game state locally.
+    function handleOnlineEdgeClick(edgeId: string) {
+        if (!socket.connected || !activeRoom?.gameState) {
+            return;
+        }
+
+        socket.emit(
+            "game:move",
+            {
+                edgeId,
+            },
+            (response: RoomActionResponse) => {
+                if ("message" in response) {
+                    setRoomMessage(response.message);
+
+                    return;
+                }
+
+                // The server also broadcasts game:updated.
+                // Storing the acknowledgement keeps this browser responsive.
+                setActiveRoom(response.room);
+            },
+        );
+    }
+
     const connectionStatusLabel =
         connectionStatus === "connected"
             ? "Connected"
@@ -348,10 +433,44 @@ function OnlineGamePage() {
                     ? "Connection error"
                     : "Disconnected";
 
-    // Identify this browser's player entry inside the active room.
+    // Identify this browser's room position.
     const currentRoomPlayer = activeRoom?.players.find(
         (player) => player.socketId === socketId,
     );
+
+    const onlineGameState =
+        activeRoom?.gameState ?? null;
+
+    const onlineGameIsComplete =
+        onlineGameState !== null &&
+        onlineGameState.moveCount >=
+        onlineGameState.edges.length;
+
+    // Only the active server-assigned player can use the board.
+    const currentBrowserCanMove =
+        onlineGameState !== null &&
+        currentRoomPlayer !== undefined &&
+        currentRoomPlayer.playerNumber ===
+        onlineGameState.currentPlayer &&
+        !onlineGameIsComplete;
+
+    const onlineCurrentPlayer =
+        onlineGameState?.players.find(
+            (player) =>
+                player.number ===
+                onlineGameState.currentPlayer,
+        );
+
+    const onlineWinningPlayer =
+        onlineGameState &&
+            onlineGameState.players[0].score >
+            onlineGameState.players[1].score
+            ? onlineGameState.players[0]
+            : onlineGameState &&
+                onlineGameState.players[1].score >
+                onlineGameState.players[0].score
+                ? onlineGameState.players[1]
+                : null;
 
     return (
         <main className="main-content online-page">
@@ -361,13 +480,13 @@ function OnlineGamePage() {
                 </p>
 
                 <h1>
-                    Create a room and invite another player.
+                    Play a synchronized LineLock match.
                 </h1>
 
                 <p className="hero-description">
-                    Phase 11 adds real-time room creation, room codes, lobby
-                    membership, and two-player readiness before synchronized
-                    gameplay begins.
+                    Every online move is validated by the server and
+                    broadcast to both players from one authoritative game
+                    state.
                 </p>
             </section>
 
@@ -473,7 +592,7 @@ function OnlineGamePage() {
                 <div className="online-room-heading">
                     <div>
                         <p className="online-card-label">
-                            Multiplayer lobby
+                            Multiplayer room
                         </p>
 
                         <h2 id="online-room-heading">
@@ -487,9 +606,7 @@ function OnlineGamePage() {
                         <span
                             className={`room-status room-status-${activeRoom.status}`}
                         >
-                            {activeRoom.status === "ready"
-                                ? "Ready"
-                                : "Waiting"}
+                            {activeRoom.status}
                         </span>
                     )}
                 </div>
@@ -532,8 +649,7 @@ function OnlineGamePage() {
                             <h3>Create a new room</h3>
 
                             <p>
-                                Generate a private code and wait for one opponent
-                                to join.
+                                Generate a private room and wait for one opponent.
                             </p>
 
                             <button
@@ -609,62 +725,48 @@ function OnlineGamePage() {
                         </section>
 
                         <section className="room-player-list">
-                            <article
-                                className={
-                                    currentRoomPlayer?.playerNumber === 1
-                                        ? "current-room-player"
-                                        : ""
-                                }
-                            >
-                                <div>
-                                    <span className="room-player-number">
-                                        Player 1
-                                    </span>
+                            {[1, 2].map((playerNumber) => {
+                                const roomPlayer =
+                                    activeRoom.players.find(
+                                        (player) =>
+                                            player.playerNumber ===
+                                            playerNumber,
+                                    );
 
-                                    <strong>
-                                        {activeRoom.players.find(
-                                            (player) =>
-                                                player.playerNumber === 1,
-                                        )?.name ?? "Waiting for player"}
-                                    </strong>
-                                </div>
+                                return (
+                                    <article
+                                        key={playerNumber}
+                                        className={
+                                            currentRoomPlayer?.playerNumber ===
+                                                playerNumber
+                                                ? "current-room-player"
+                                                : ""
+                                        }
+                                    >
+                                        <div>
+                                            <span className="room-player-number">
+                                                Player {playerNumber}
+                                            </span>
 
-                                <span className="room-player-state">
-                                    Connected
-                                </span>
-                            </article>
+                                            <strong>
+                                                {roomPlayer?.name ??
+                                                    "Waiting for player"}
+                                            </strong>
+                                        </div>
 
-                            <article
-                                className={
-                                    currentRoomPlayer?.playerNumber === 2
-                                        ? "current-room-player"
-                                        : ""
-                                }
-                            >
-                                <div>
-                                    <span className="room-player-number">
-                                        Player 2
-                                    </span>
-
-                                    <strong>
-                                        {activeRoom.players.find(
-                                            (player) =>
-                                                player.playerNumber === 2,
-                                        )?.name ?? "Waiting for player"}
-                                    </strong>
-                                </div>
-
-                                <span
-                                    className={`room-player-state ${activeRoom.players.length < 2
-                                            ? "waiting-player-state"
-                                            : ""
-                                        }`}
-                                >
-                                    {activeRoom.players.length < 2
-                                        ? "Waiting"
-                                        : "Connected"}
-                                </span>
-                            </article>
+                                        <span
+                                            className={`room-player-state ${!roomPlayer
+                                                    ? "waiting-player-state"
+                                                    : ""
+                                                }`}
+                                        >
+                                            {roomPlayer
+                                                ? "Connected"
+                                                : "Waiting"}
+                                        </span>
+                                    </article>
+                                );
+                            })}
                         </section>
 
                         <div className="active-room-actions">
@@ -685,9 +787,173 @@ function OnlineGamePage() {
                                     : "Leave Room"}
                             </button>
                         </div>
+
+                        {activeRoom.status === "ready" &&
+                            currentRoomPlayer?.playerNumber === 1 && (
+                                <button
+                                    className="start-online-game-button"
+                                    type="button"
+                                    disabled={roomActionIsPending}
+                                    onClick={handleStartOnlineGame}
+                                >
+                                    {roomActionIsPending
+                                        ? "Starting Match..."
+                                        : "Start Online Match"}
+                                </button>
+                            )}
+
+                        {activeRoom.status === "ready" &&
+                            currentRoomPlayer?.playerNumber === 2 && (
+                                <p className="waiting-for-host-message">
+                                    Waiting for Player 1 to start the match.
+                                </p>
+                            )}
                     </div>
                 )}
             </section>
+
+            {onlineGameState && (
+                <section className="online-game-area">
+                    <section
+                        className="game-feedback online-turn-feedback"
+                        aria-live="polite"
+                    >
+                        <span aria-hidden="true">i</span>
+
+                        <p>
+                            {onlineGameIsComplete
+                                ? "The online match is complete."
+                                : currentBrowserCanMove
+                                    ? "Your turn. Choose an available edge."
+                                    : `${onlineCurrentPlayer?.name ?? "The other player"} is choosing an edge.`}
+                        </p>
+                    </section>
+
+                    <section
+                        className="game-information"
+                        aria-label="Online game information"
+                    >
+                        <article
+                            className={`player-card ${!onlineGameIsComplete &&
+                                    onlineGameState.currentPlayer === 1
+                                    ? "active-player player-one-active"
+                                    : ""
+                                }`}
+                        >
+                            <div className="player-information">
+                                <span className="player-dot player-one-dot" />
+
+                                <div>
+                                    <p>Player 1</p>
+                                    <h2>
+                                        {onlineGameState.players[0].name}
+                                    </h2>
+                                </div>
+                            </div>
+
+                            <strong>
+                                {onlineGameState.players[0].score}
+                            </strong>
+                        </article>
+
+                        <article
+                            className={`turn-card ${onlineGameIsComplete
+                                    ? "game-complete-turn"
+                                    : onlineGameState.currentPlayer === 1
+                                        ? "player-one-turn"
+                                        : "player-two-turn"
+                                }`}
+                            aria-live="polite"
+                        >
+                            <p>
+                                {onlineGameIsComplete
+                                    ? "Game status"
+                                    : "Current player"}
+                            </p>
+
+                            <strong>
+                                {onlineGameIsComplete
+                                    ? "Complete"
+                                    : onlineCurrentPlayer?.name ??
+                                    "Unknown player"}
+                            </strong>
+                        </article>
+
+                        <article
+                            className={`player-card ${!onlineGameIsComplete &&
+                                    onlineGameState.currentPlayer === 2
+                                    ? "active-player player-two-active"
+                                    : ""
+                                }`}
+                        >
+                            <div className="player-information">
+                                <span className="player-dot player-two-dot" />
+
+                                <div>
+                                    <p>Player 2</p>
+                                    <h2>
+                                        {onlineGameState.players[1].name}
+                                    </h2>
+                                </div>
+                            </div>
+
+                            <strong>
+                                {onlineGameState.players[1].score}
+                            </strong>
+                        </article>
+                    </section>
+
+                    {onlineGameIsComplete && (
+                        <section
+                            className="game-result"
+                            aria-live="assertive"
+                            aria-labelledby="online-result-heading"
+                        >
+                            <p className="result-label">
+                                Online result
+                            </p>
+
+                            <h2 id="online-result-heading">
+                                {onlineWinningPlayer
+                                    ? `${onlineWinningPlayer.name} wins!`
+                                    : "The game ends in a tie!"}
+                            </h2>
+
+                            <p className="result-score">
+                                {onlineGameState.players[0].name}{" "}
+                                <strong>
+                                    {onlineGameState.players[0].score}
+                                </strong>
+
+                                <span aria-hidden="true">–</span>
+
+                                <strong>
+                                    {onlineGameState.players[1].score}
+                                </strong>{" "}
+
+                                {onlineGameState.players[1].name}
+                            </p>
+
+                            {currentRoomPlayer?.playerNumber === 1 && (
+                                <button
+                                    className="restart-button"
+                                    type="button"
+                                    onClick={handleStartOnlineGame}
+                                >
+                                    Start New Match
+                                </button>
+                            )}
+                        </section>
+                    )}
+
+                    <GameBoard
+                        gameState={onlineGameState}
+                        isGameComplete={onlineGameIsComplete}
+                        isInteractionDisabled={!currentBrowserCanMove}
+                        onEdgeClick={handleOnlineEdgeClick}
+                    />
+                </section>
+            )}
 
             <section className="online-next-step-card">
                 <p className="online-card-label">
@@ -695,13 +961,14 @@ function OnlineGamePage() {
                 </p>
 
                 <h2>
-                    Server-controlled gameplay begins in Phase 12.
+                    Reconnection handling begins in Phase 13.
                 </h2>
 
                 <p>
-                    Both browsers can now enter the same room and receive
-                    membership updates. The next phase will place the board
-                    and move validation on the server.
+                    Online game state now lives on the server and remains
+                    synchronized between both connected browsers. The next
+                    phase will preserve player positions during temporary
+                    disconnections.
                 </p>
 
                 <div className="online-phase-list">
@@ -715,7 +982,7 @@ function OnlineGamePage() {
                         <strong>Online Rooms</strong>
                     </article>
 
-                    <article>
+                    <article className="completed-online-phase">
                         <span>Phase 12</span>
                         <strong>Server-Controlled State</strong>
                     </article>
