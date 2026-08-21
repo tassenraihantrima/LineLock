@@ -235,7 +235,8 @@ function GameBoard({
                                     disabled={
                                         !edge ||
                                         edgeIsClaimed ||
-                                        isGameComplete
+                                        isGameComplete ||
+                                        isInteractionDisabled
                                     }
                                     aria-pressed={edgeIsClaimed}
                                     aria-label={`Vertical edge at row ${(position.row + 1) / 2
@@ -247,7 +248,7 @@ function GameBoard({
                                                 : ", available"
                                         }`}
                                     onClick={() => {
-                                        if (edge && !isGameComplete) {
+                                        if (edge && !isGameComplete && !isInteractionDisabled) {
                                             onEdgeClick(edge.id);
                                         }
                                     }}
