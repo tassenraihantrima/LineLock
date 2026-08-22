@@ -1458,3 +1458,178 @@ Preserving an interrupted match is reserved for Phase 13.
 ### Next Phase
 
 Phase 13 will preserve room membership and authoritative game state during temporary disconnects, allow players to rejoin using recovery tokens, and apply reconnection grace periods.
+
+---
+
+## Phase 13 — Reconnection Handling
+
+### Goal
+
+Preserve online room membership and authoritative game state during temporary Socket.IO disconnections and allow players to recover their existing multiplayer position without restarting the match.
+
+### Work Completed
+
+- Added private recovery tokens for online players.
+- Generated cryptographically random recovery credentials on the server.
+- Separated public room-player information from private server recovery data.
+- Added connected and disconnected player states.
+- Added a thirty-second reconnection grace period.
+- Preserved room membership during temporary disconnections.
+- Preserved authoritative game state during the grace period.
+- Preserved player scores, claimed edges, completed boxes, move count, and current turn.
+- Added a typed room-recovery Socket.IO event.
+- Added server-side recovery-token validation.
+- Replaced expired Socket.IO IDs with newly connected socket IDs.
+- Preserved Player 1 and Player 2 positions after reconnection.
+- Cancelled pending disconnect timers after successful recovery.
+- Stored recovery credentials in browser session storage.
+- Automatically attempted room recovery after Socket.IO reconnection.
+- Paused online gameplay while either player was disconnected.
+- Prevented new games from starting while a room member was disconnected.
+- Added reconnection-aware lobby status.
+- Disabled board interaction while waiting for another player to recover.
+- Removed expired disconnected players after the grace period.
+- Cleared interrupted games only after recovery opportunities expired.
+- Preserved immediate room cleanup for intentional Leave Room actions.
+
+### Recovery Identity
+
+Socket.IO socket IDs are temporary and may change whenever a browser reconnects.
+
+Phase 13 therefore separates connection identity from player recovery identity.
+
+Each internal room player stores:
+
+- Current Socket.IO socket ID
+- Player name
+- Player number
+- Connection status
+- Private recovery token
+- Optional disconnect timer
+
+Recovery tokens are never included in public room broadcasts.
+
+The requesting browser receives only its own token through the acknowledgement returned when creating, joining, or recovering a room.
+
+### Temporary Disconnection Process
+
+When a connected room member disconnects:
+
+1. The player remains inside the server room record.
+2. The player is marked disconnected.
+3. The authoritative game state remains unchanged.
+4. A thirty-second grace-period timer begins.
+5. The remaining player receives an updated room state.
+6. Online moves are paused while the player is absent.
+
+The game is therefore not immediately cancelled when a network interruption occurs.
+
+### Room Recovery Process
+
+When Socket.IO reconnects:
+
+1. The browser receives a new socket ID.
+2. The browser reads its room code and recovery token from session storage.
+3. The browser sends a room-recovery request.
+4. The server validates the room and private recovery token.
+5. The pending disconnect timer is cancelled.
+6. The player's old socket ID is replaced with the new socket ID.
+7. The player is marked connected.
+8. The new socket rejoins the Socket.IO room.
+9. The original player number is preserved.
+10. The existing authoritative game state is returned.
+11. Both room members receive synchronized room and game updates.
+
+No new game state is created during recovery.
+
+### Preserved Match State
+
+A successful recovery preserves:
+
+- Board size
+- Player names
+- Player numbers
+- Player scores
+- Claimed edges
+- Edge ownership
+- Completed boxes
+- Box ownership
+- Move count
+- Current player
+- Match-completion state
+
+This allows an interrupted match to continue from the exact server-authoritative state that existed before the disconnection.
+
+### Grace-Period Expiration
+
+If a disconnected player does not recover before the grace period expires:
+
+- The disconnected player is permanently removed.
+- An empty room is deleted.
+- An interrupted match is cleared when another player remains.
+- The remaining member becomes Player 1.
+- The lobby returns to a waiting state.
+
+Intentional room leaving does not use the grace period and continues to remove the player immediately.
+
+### Client Recovery Storage
+
+Recovery credentials are stored using browser session storage.
+
+Session-scoped storage allows a page refresh or temporary Socket.IO interruption to preserve recovery information without making the recovery identity part of the public room state.
+
+The credentials are removed when the player intentionally leaves the room or when recovery can no longer succeed.
+
+### Multiplayer Safety
+
+Phase 13 maintains server authority during disconnections.
+
+The server rejects game moves whenever both room players are not actively connected.
+
+The client also disables board interaction during the same period.
+
+This prevents either player from gaining an advantage while their opponent is temporarily disconnected.
+
+### Technologies Practiced
+
+- Socket.IO reconnection handling
+- Persistent session identity
+- Cryptographically random recovery tokens
+- Node.js timers
+- Browser session storage
+- Server-side credential validation
+- Connection lifecycle management
+- Authoritative state preservation
+- Defensive multiplayer programming
+- Real-time room recovery
+- Typed Socket.IO recovery events
+
+### Testing Completed
+
+- Confirmed a disconnected player remains in the room during the grace period.
+- Confirmed the authoritative board remains unchanged during temporary disconnection.
+- Confirmed scores remain unchanged during temporary disconnection.
+- Confirmed completed boxes remain unchanged.
+- Confirmed claimed edges remain unchanged.
+- Confirmed the current turn remains unchanged.
+- Confirmed online moves are blocked while a player is disconnected.
+- Confirmed the lobby displays a reconnecting player state.
+- Confirmed refreshing Player 1 creates a new socket ID while preserving Player 1 identity.
+- Confirmed refreshing Player 2 creates a new socket ID while preserving Player 2 identity.
+- Confirmed recovery restores the active room.
+- Confirmed recovery restores an active game.
+- Confirmed successful recovery cancels the disconnect timer.
+- Confirmed recovered games do not expire after the original timer deadline.
+- Confirmed invalid recovery credentials are rejected.
+- Confirmed disconnected player positions cannot be taken by a third player.
+- Confirmed a player who exceeds the grace period is permanently removed.
+- Confirmed empty rooms are deleted after timeout.
+- Confirmed intentional Leave Room actions still remove players immediately.
+- Confirmed local gameplay remains unaffected.
+- Confirmed client linting succeeds.
+- Confirmed the client production build succeeds.
+- Confirmed server TypeScript checking succeeds.
+
+### Next Phase
+
+Phase 14 will introduce user authentication and persistent database storage so player identity, accounts, and multiplayer information can survive beyond individual server sessions.

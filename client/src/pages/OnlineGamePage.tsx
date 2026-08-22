@@ -21,6 +21,63 @@ type ConnectionStatus =
     | "disconnected"
     | "error";
 
+const RECOVERY_ROOM_CODE_KEY =
+    "linelock:recovery-room-code";
+
+const RECOVERY_TOKEN_KEY =
+    "linelock:recovery-token";
+
+type RecoveryCredentials = {
+    roomCode: string;
+    recoveryToken: string;
+};
+
+// Store recovery credentials only for this browser tab/session.
+function saveRecoveryCredentials(
+    roomCode: string,
+    recoveryToken: string,
+): void {
+    sessionStorage.setItem(
+        RECOVERY_ROOM_CODE_KEY,
+        roomCode,
+    );
+
+    sessionStorage.setItem(
+        RECOVERY_TOKEN_KEY,
+        recoveryToken,
+    );
+}
+
+function getRecoveryCredentials():
+    RecoveryCredentials | null {
+    const roomCode = sessionStorage.getItem(
+        RECOVERY_ROOM_CODE_KEY,
+    );
+
+    const recoveryToken = sessionStorage.getItem(
+        RECOVERY_TOKEN_KEY,
+    );
+
+    if (!roomCode || !recoveryToken) {
+        return null;
+    }
+
+    return {
+        roomCode,
+        recoveryToken,
+    };
+}
+
+function clearRecoveryCredentials(): void {
+    sessionStorage.removeItem(
+        RECOVERY_ROOM_CODE_KEY,
+    );
+
+    sessionStorage.removeItem(
+        RECOVERY_TOKEN_KEY,
+    );
+}
+
 function OnlineGamePage() {
     // Display the current Socket.IO connection lifecycle.
     const [
@@ -71,6 +128,61 @@ function OnlineGamePage() {
         useState(false);
 
     useEffect(() => {
+        // Recover the player's previous room position when
+        // Socket.IO establishes a replacement connection.
+        function attemptRoomRecovery() {
+            const credentials =
+                getRecoveryCredentials();
+
+            if (!credentials || !socket.connected) {
+                return;
+            }
+
+            setRoomActionIsPending(true);
+
+            setRoomMessage(
+                "Recovering your previous room position...",
+            );
+
+            socket.emit(
+                "room:recover",
+                credentials,
+                (response: RoomActionResponse) => {
+                    setRoomActionIsPending(false);
+
+                    if ("message" in response) {
+                        clearRecoveryCredentials();
+                        setActiveRoom(null);
+
+                        setRoomMessage(
+                            `${response.message} Create or join a new room.`,
+                        );
+
+                        return;
+                    }
+
+                    if (response.recoveryToken) {
+                        saveRecoveryCredentials(
+                            response.room.roomCode,
+                            response.recoveryToken,
+                        );
+                    }
+
+                    setActiveRoom(response.room);
+
+                    setRoomCodeInput(
+                        response.room.roomCode,
+                    );
+
+                    setRoomMessage(
+                        response.room.gameState
+                            ? "Room recovered. Your online match has been restored."
+                            : "Room recovered successfully.",
+                    );
+                },
+            );
+        }
+
         // Update the page when the socket connection opens.
         function handleConnect() {
             setConnectionStatus("connected");
@@ -79,6 +191,8 @@ function OnlineGamePage() {
             setServerMessage(
                 "Connected. Waiting for server confirmation.",
             );
+
+            attemptRoomRecovery();
         }
 
         // Clear room information after disconnection.
@@ -89,14 +203,18 @@ function OnlineGamePage() {
             setLatency(null);
             setPingIsPending(false);
             setRoomActionIsPending(false);
-            setActiveRoom(null);
 
             setServerMessage(
                 `The real-time connection closed: ${reason}.`,
             );
 
+            const recoveryCredentials =
+                getRecoveryCredentials();
+
             setRoomMessage(
-                "The room connection ended. Reconnect before creating or joining another room.",
+                recoveryCredentials
+                    ? "Connection interrupted. Your room position is being preserved while LineLock reconnects."
+                    : "The server connection ended. Reconnect before creating or joining a room.",
             );
         }
 
@@ -131,6 +249,19 @@ function OnlineGamePage() {
         // Store lobby membership updates.
         function handleRoomUpdated(room: OnlineRoom) {
             setActiveRoom(room);
+
+            const disconnectedPlayer =
+                room.players.find(
+                    (player) => !player.isConnected,
+                );
+
+            if (disconnectedPlayer) {
+                setRoomMessage(
+                    `${disconnectedPlayer.name} disconnected. Their position is reserved briefly while they reconnect.`,
+                );
+
+                return;
+            }
 
             if (room.status === "waiting") {
                 setRoomMessage(
@@ -269,6 +400,13 @@ function OnlineGamePage() {
                     return;
                 }
 
+                if (response.recoveryToken) {
+                    saveRecoveryCredentials(
+                        response.room.roomCode,
+                        response.recoveryToken,
+                    );
+                }
+
                 setActiveRoom(response.room);
                 setRoomCodeInput(response.room.roomCode);
 
@@ -310,6 +448,13 @@ function OnlineGamePage() {
                     return;
                 }
 
+                if (response.recoveryToken) {
+                    saveRecoveryCredentials(
+                        response.room.roomCode,
+                        response.recoveryToken,
+                    );
+                }
+
                 setActiveRoom(response.room);
                 setRoomCodeInput(response.room.roomCode);
 
@@ -340,6 +485,8 @@ function OnlineGamePage() {
 
                     return;
                 }
+
+                clearRecoveryCredentials();
 
                 setActiveRoom(null);
                 setRoomCodeInput("");
@@ -441,6 +588,17 @@ function OnlineGamePage() {
     const onlineGameState =
         activeRoom?.gameState ?? null;
 
+    const disconnectedRoomPlayer =
+        activeRoom?.players.find(
+            (player) => !player.isConnected,
+        );
+
+    const allRoomPlayersConnected =
+        activeRoom?.players.length === 2 &&
+        activeRoom.players.every(
+            (player) => player.isConnected,
+        );
+
     const onlineGameIsComplete =
         onlineGameState !== null &&
         onlineGameState.moveCount >=
@@ -452,6 +610,7 @@ function OnlineGamePage() {
         currentRoomPlayer !== undefined &&
         currentRoomPlayer.playerNumber ===
         onlineGameState.currentPlayer &&
+        allRoomPlayersConnected &&
         !onlineGameIsComplete;
 
     const onlineCurrentPlayer =
@@ -755,14 +914,17 @@ function OnlineGamePage() {
                                         </div>
 
                                         <span
-                                            className={`room-player-state ${!roomPlayer
-                                                    ? "waiting-player-state"
-                                                    : ""
+                                            className={`room-player-state ${!roomPlayer ||
+                                                !roomPlayer.isConnected
+                                                ? "waiting-player-state"
+                                                : ""
                                                 }`}
                                         >
-                                            {roomPlayer
-                                                ? "Connected"
-                                                : "Waiting"}
+                                            {!roomPlayer
+                                                ? "Waiting"
+                                                : roomPlayer.isConnected
+                                                    ? "Connected"
+                                                    : "Reconnecting..."}
                                         </span>
                                     </article>
                                 );
@@ -789,23 +951,31 @@ function OnlineGamePage() {
                         </div>
 
                         {activeRoom.status === "ready" &&
+                            allRoomPlayersConnected &&
                             currentRoomPlayer?.playerNumber === 1 && (
                                 <button
-                                    className="start-online-game-button"
+                                    className="restart-button"
                                     type="button"
-                                    disabled={roomActionIsPending}
                                     onClick={handleStartOnlineGame}
+                                    disabled={roomActionIsPending}
                                 >
                                     {roomActionIsPending
-                                        ? "Starting Match..."
+                                        ? "Starting..."
                                         : "Start Online Match"}
                                 </button>
                             )}
 
                         {activeRoom.status === "ready" &&
+                            allRoomPlayersConnected &&
                             currentRoomPlayer?.playerNumber === 2 && (
                                 <p className="waiting-for-host-message">
                                     Waiting for Player 1 to start the match.
+                                </p>
+                            )}
+                        {activeRoom.status === "ready" &&
+                            !allRoomPlayersConnected && (
+                                <p className="waiting-for-host-message">
+                                    The match is paused until both players are connected.
                                 </p>
                             )}
                     </div>
@@ -823,9 +993,11 @@ function OnlineGamePage() {
                         <p>
                             {onlineGameIsComplete
                                 ? "The online match is complete."
-                                : currentBrowserCanMove
-                                    ? "Your turn. Choose an available edge."
-                                    : `${onlineCurrentPlayer?.name ?? "The other player"} is choosing an edge.`}
+                                : disconnectedRoomPlayer
+                                    ? `${disconnectedRoomPlayer.name} disconnected. The match is paused while they reconnect.`
+                                    : currentBrowserCanMove
+                                        ? "Your turn. Choose an available edge."
+                                        : `${onlineCurrentPlayer?.name ?? "The other player"} is choosing an edge.`}
                         </p>
                     </section>
 
@@ -835,9 +1007,9 @@ function OnlineGamePage() {
                     >
                         <article
                             className={`player-card ${!onlineGameIsComplete &&
-                                    onlineGameState.currentPlayer === 1
-                                    ? "active-player player-one-active"
-                                    : ""
+                                onlineGameState.currentPlayer === 1
+                                ? "active-player player-one-active"
+                                : ""
                                 }`}
                         >
                             <div className="player-information">
@@ -858,10 +1030,10 @@ function OnlineGamePage() {
 
                         <article
                             className={`turn-card ${onlineGameIsComplete
-                                    ? "game-complete-turn"
-                                    : onlineGameState.currentPlayer === 1
-                                        ? "player-one-turn"
-                                        : "player-two-turn"
+                                ? "game-complete-turn"
+                                : onlineGameState.currentPlayer === 1
+                                    ? "player-one-turn"
+                                    : "player-two-turn"
                                 }`}
                             aria-live="polite"
                         >
@@ -881,9 +1053,9 @@ function OnlineGamePage() {
 
                         <article
                             className={`player-card ${!onlineGameIsComplete &&
-                                    onlineGameState.currentPlayer === 2
-                                    ? "active-player player-two-active"
-                                    : ""
+                                onlineGameState.currentPlayer === 2
+                                ? "active-player player-two-active"
+                                : ""
                                 }`}
                         >
                             <div className="player-information">

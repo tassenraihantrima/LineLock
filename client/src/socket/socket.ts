@@ -32,6 +32,7 @@ export type OnlineRoomPlayer = {
     socketId: string;
     name: string;
     playerNumber: OnlinePlayerNumber;
+    isConnected: boolean;
 };
 
 // Describe the current online room state.
@@ -57,6 +58,13 @@ export type JoinRoomPayload = {
     playerName: string;
 };
 
+// Describe the credentials used to recover a room position
+// after a temporary Socket.IO disconnection.
+export type RecoverRoomPayload = {
+    roomCode: string;
+    recoveryToken: string;
+};
+
 // Describe one requested online edge move.
 export type OnlineMovePayload = {
     edgeId: string;
@@ -67,6 +75,7 @@ export type RoomActionResponse =
     | {
         success: true;
         room: OnlineRoom;
+        recoveryToken?: string;
     }
     | {
         success: false;
@@ -105,6 +114,11 @@ interface ClientToServerEvents {
 
     "room:join": (
         payload: JoinRoomPayload,
+        callback: (response: RoomActionResponse) => void,
+    ) => void;
+
+    "room:recover": (
+        payload: RecoverRoomPayload,
         callback: (response: RoomActionResponse) => void,
     ) => void;
 

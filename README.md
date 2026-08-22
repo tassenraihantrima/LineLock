@@ -10,7 +10,7 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 12 is complete.
+Phase 13 is complete.
 
 The project currently includes:
 
@@ -38,8 +38,18 @@ The project currently includes:
 - Rejection of invalid and out-of-turn moves
 - Automatic game cancellation after a player disconnects
 - Responsive and accessible online gameplay interfaces
+- Temporary online disconnection recovery
+- Private recovery-token player identity
+- Thirty-second reconnection grace period
+- Preserved room membership during temporary disconnects
+- Preserved authoritative game state during temporary disconnects
+- Automatic room recovery after Socket.IO reconnection
+- Preserved player positions after reconnection
+- Reconnection-aware lobby status
+- Paused online gameplay while a player reconnects
+- Automatic room cleanup after reconnection timeout
 
-Temporary disconnection recovery will be implemented in Phase 13.
+Authentication and persistent player accounts will be implemented in Phase 14.
 
 ---
 
@@ -181,7 +191,7 @@ This starts:
 - ✅ Phase 10 – Socket.IO Integration
 - ✅ Phase 11 – Online Rooms
 - ✅ Phase 12 – Server-Controlled Game State
-- ⬜ Phase 13 – Reconnection Handling
+- ✅ Phase 13 – Reconnection Handling
 - ⬜ Phase 14 – Authentication & Database
 - ⬜ Phase 15 – Statistics, Deployment & Documentation
 

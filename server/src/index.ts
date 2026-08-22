@@ -1,6 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import {
   Server,
@@ -76,6 +77,14 @@ type OnlineRoomPlayer = {
   socketId: string;
   name: string;
   playerNumber: PlayerNumber;
+  isConnected: boolean;
+};
+
+// Store private recovery information that must never be
+// included in the public room object sent to browsers.
+type RoomPlayerRecord = OnlineRoomPlayer & {
+  recoveryToken: string;
+  disconnectTimer: ReturnType<typeof setTimeout> | null;
 };
 
 // Describe the public room sent to connected browsers.
@@ -93,7 +102,7 @@ type OnlineRoom = {
 // Describe the server's internal room record.
 type RoomRecord = {
   roomCode: string;
-  players: OnlineRoomPlayer[];
+  players: RoomPlayerRecord[];
   gameState: ServerGameState | null;
 };
 
@@ -108,6 +117,12 @@ type JoinRoomPayload = {
   playerName: string;
 };
 
+// Identify a returning player after a temporary disconnect.
+type RecoverRoomPayload = {
+  roomCode: string;
+  recoveryToken: string;
+};
+
 // Describe one requested online move.
 type OnlineMovePayload = {
   edgeId: string;
@@ -118,6 +133,7 @@ type RoomActionResponse =
   | {
     success: true;
     room: OnlineRoom;
+    recoveryToken?: string;
   }
   | {
     success: false;
@@ -159,6 +175,11 @@ interface ClientToServerEvents {
     callback: (response: RoomActionResponse) => void,
   ) => void;
 
+  "room:recover": (
+    payload: RecoverRoomPayload,
+    callback: (response: RoomActionResponse) => void,
+  ) => void;
+
   "room:leave": (
     callback: (response: RoomActionResponse) => void,
   ) => void;
@@ -191,6 +212,10 @@ const httpServer = createServer(app);
 
 // Use a deployment port when available.
 const PORT = Number(process.env.PORT) || 3001;
+
+// Keep disconnected players inside their room briefly so they
+// have an opportunity to recover their position.
+const RECONNECTION_GRACE_PERIOD_MS = 30_000;
 
 // Accept both common Vite development addresses.
 const allowedClientOrigins = [
@@ -234,6 +259,12 @@ function cleanPlayerName(playerName: string): string {
 // Normalize room codes before searching.
 function cleanRoomCode(roomCode: string): string {
   return roomCode.trim().toUpperCase();
+}
+
+// Create a private credential used to recover the same
+// player position after a temporary disconnection.
+function generateRecoveryToken(): string {
+  return randomBytes(32).toString("hex");
 }
 
 // Generate a unique six-character room code.
@@ -425,6 +456,17 @@ function isBoxComplete(
   );
 }
 
+// Determine whether every stored room player currently has
+// an active Socket.IO connection.
+function areAllRoomPlayersConnected(
+  room: RoomRecord,
+): boolean {
+  return (
+    room.players.length === 2 &&
+    room.players.every((player) => player.isConnected)
+  );
+}
+
 // Return the player who should act after a normal move.
 function getOtherPlayer(
   currentPlayer: PlayerNumber,
@@ -547,7 +589,10 @@ function createRoomSummary(
     roomCode: room.roomCode,
     status,
     players: room.players.map((player) => ({
-      ...player,
+      socketId: player.socketId,
+      name: player.name,
+      playerNumber: player.playerNumber,
+      isConnected: player.isConnected,
     })),
     gameState: room.gameState
       ? {
@@ -591,6 +636,127 @@ function broadcastGameUpdate(
   );
 }
 
+// Permanently remove a player whose reconnection grace period
+// expired before they returned.
+function expireDisconnectedPlayer(
+  roomCode: string,
+  recoveryToken: string,
+): void {
+  const room = rooms.get(roomCode);
+
+  if (!room) {
+    return;
+  }
+
+  const disconnectedPlayer = room.players.find(
+    (player) =>
+      player.recoveryToken === recoveryToken &&
+      !player.isConnected,
+  );
+
+  // The player may already have recovered before this timer fired.
+  if (!disconnectedPlayer) {
+    return;
+  }
+
+  room.players = room.players.filter(
+    (player) => player.recoveryToken !== recoveryToken,
+  );
+
+  console.log(
+    `${disconnectedPlayer.name}'s recovery period expired in room ${roomCode}.`,
+  );
+
+  // Delete the room if nobody remains.
+  if (room.players.length === 0) {
+    rooms.delete(roomCode);
+
+    console.log(
+      `Room deleted after reconnection timeout: ${roomCode}`,
+    );
+
+    return;
+  }
+
+  // An interrupted two-player game cannot continue once
+  // the missing player's grace period has expired.
+  room.gameState = null;
+
+  // The remaining player becomes Player 1.
+  room.players = room.players.map((player, index) => ({
+    ...player,
+    playerNumber: (index + 1) as PlayerNumber,
+    disconnectTimer: null,
+  }));
+
+  const remainingPlayer = room.players[0];
+
+  if (remainingPlayer) {
+    const remainingSocket = io.sockets.sockets.get(
+      remainingPlayer.socketId,
+    );
+
+    if (remainingSocket) {
+      remainingSocket.data.playerNumber = 1;
+    }
+  }
+
+  broadcastRoomUpdate(room);
+}
+
+// Preserve a player's room position and authoritative game state
+// during a temporary Socket.IO disconnection.
+function markPlayerDisconnected(
+  socket: Socket<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    InterServerEvents,
+    SocketData
+  >,
+): void {
+  const roomCode = socket.data.roomCode;
+
+  if (!roomCode) {
+    return;
+  }
+
+  const room = rooms.get(roomCode);
+
+  if (!room) {
+    return;
+  }
+
+  const player = room.players.find(
+    (roomPlayer) => roomPlayer.socketId === socket.id,
+  );
+
+  if (!player) {
+    return;
+  }
+
+  player.isConnected = false;
+
+  // Defensive cleanup in case an older timer somehow exists.
+  if (player.disconnectTimer) {
+    clearTimeout(player.disconnectTimer);
+  }
+
+  player.disconnectTimer = setTimeout(() => {
+    expireDisconnectedPlayer(
+      roomCode,
+      player.recoveryToken,
+    );
+  }, RECONNECTION_GRACE_PERIOD_MS);
+
+  console.log(
+    `${player.name} can recover room ${roomCode} for the next 30 seconds.`,
+  );
+
+  // Keep the player and game state in the room.
+  // Only their connection status changes.
+  broadcastRoomUpdate(room);
+}
+
 // Remove a socket from its current room.
 function removeSocketFromRoom(
   socket: Socket<
@@ -607,6 +773,17 @@ function removeSocketFromRoom(
   }
 
   const room = rooms.get(roomCode);
+
+  if (room) {
+    const player = room.players.find(
+      (roomPlayer) => roomPlayer.socketId === socket.id,
+    );
+
+    if (player?.disconnectTimer) {
+      clearTimeout(player.disconnectTimer);
+      player.disconnectTimer = null;
+    }
+  }
 
   socket.leave(roomCode);
 
@@ -707,6 +884,8 @@ io.on("connection", (socket) => {
 
       const roomCode = generateRoomCode();
 
+      const recoveryToken = generateRecoveryToken();
+
       const room: RoomRecord = {
         roomCode,
         players: [
@@ -714,6 +893,9 @@ io.on("connection", (socket) => {
             socketId: socket.id,
             name: playerName,
             playerNumber: 1,
+            isConnected: true,
+            recoveryToken,
+            disconnectTimer: null,
           },
         ],
         gameState: null,
@@ -735,6 +917,7 @@ io.on("connection", (socket) => {
       callback({
         success: true,
         room: roomSummary,
+        recoveryToken,
       });
 
       broadcastRoomUpdate(room);
@@ -777,12 +960,16 @@ io.on("connection", (socket) => {
 
       removeSocketFromRoom(socket);
 
+      const recoveryToken = generateRecoveryToken();
+
       room.players.push({
         socketId: socket.id,
         name: playerName,
         playerNumber: 2,
+        isConnected: true,
+        recoveryToken,
+        disconnectTimer: null,
       });
-
       socket.join(roomCode);
       socket.data.roomCode = roomCode;
       socket.data.playerName = playerName;
@@ -797,9 +984,134 @@ io.on("connection", (socket) => {
       callback({
         success: true,
         room: roomSummary,
+        recoveryToken,
       });
 
       broadcastRoomUpdate(room);
+    },
+  );
+
+  // Recover a player's existing room position after a
+  // temporary Socket.IO disconnection.
+  socket.on(
+    "room:recover",
+    (payload, callback) => {
+      const roomCode = cleanRoomCode(
+        payload.roomCode,
+      );
+
+      const recoveryToken =
+        payload.recoveryToken.trim();
+
+      if (!roomCode || !recoveryToken) {
+        callback({
+          success: false,
+          message:
+            "Room recovery information is incomplete.",
+        });
+
+        return;
+      }
+
+      // A socket already participating in a room should not
+      // recover a second player identity.
+      if (socket.data.roomCode) {
+        callback({
+          success: false,
+          message:
+            "Leave the current room before recovering another room.",
+        });
+
+        return;
+      }
+
+      const room = rooms.get(roomCode);
+
+      if (!room) {
+        callback({
+          success: false,
+          message:
+            "The room is no longer available.",
+        });
+
+        return;
+      }
+
+      const recoveringPlayer = room.players.find(
+        (player) =>
+          player.recoveryToken === recoveryToken,
+      );
+
+      if (!recoveringPlayer) {
+        callback({
+          success: false,
+          message:
+            "The recovery token is not valid for this room.",
+        });
+
+        return;
+      }
+
+      if (recoveringPlayer.isConnected) {
+        const existingSocket =
+          io.sockets.sockets.get(
+            recoveringPlayer.socketId,
+          );
+
+        if (existingSocket?.connected) {
+          callback({
+            success: false,
+            message:
+              "That player is already connected to the room.",
+          });
+
+          return;
+        }
+
+        // Defensive correction if the old socket disappeared
+        // before its disconnect event updated the room record.
+        recoveringPlayer.isConnected = false;
+      }
+
+      if (recoveringPlayer.disconnectTimer) {
+        clearTimeout(
+          recoveringPlayer.disconnectTimer,
+        );
+
+        recoveringPlayer.disconnectTimer = null;
+      }
+
+      // Replace the old temporary Socket.IO identity.
+      recoveringPlayer.socketId = socket.id;
+      recoveringPlayer.isConnected = true;
+
+      socket.join(roomCode);
+
+      socket.data.roomCode = roomCode;
+      socket.data.playerName =
+        recoveringPlayer.name;
+      socket.data.playerNumber =
+        recoveringPlayer.playerNumber;
+
+      const roomSummary =
+        createRoomSummary(room);
+
+      console.log(
+        `${recoveringPlayer.name} recovered Player ${recoveringPlayer.playerNumber} in room ${roomCode}.`,
+      );
+
+      callback({
+        success: true,
+        room: roomSummary,
+        recoveryToken:
+          recoveringPlayer.recoveryToken,
+      });
+
+      broadcastRoomUpdate(room);
+
+      if (room.gameState) {
+        broadcastGameUpdate(room);
+      }
     },
   );
 
@@ -863,7 +1175,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (room.players.length !== 2) {
+    if (!areAllRoomPlayersConnected(room)) {
       callback({
         success: false,
         message:
@@ -950,6 +1262,16 @@ io.on("connection", (socket) => {
         return;
       }
 
+      if (!areAllRoomPlayersConnected(room)) {
+        callback({
+          success: false,
+          message:
+            "The match is paused while a player reconnects.",
+        });
+
+        return;
+      }
+
       if (isServerGameComplete(room.gameState)) {
         callback({
           success: false,
@@ -1014,22 +1336,24 @@ io.on("connection", (socket) => {
     },
   );
 
-  // Remove disconnected players from rooms.
+  // Preserve room membership during temporary disconnections.
   socket.on("disconnect", (reason) => {
     const previousRoomCode =
       socket.data.roomCode;
 
-    removeSocketFromRoom(socket);
-
     if (previousRoomCode) {
+      markPlayerDisconnected(socket);
+
       console.log(
-        `Player ${socket.id} disconnected from room ${previousRoomCode}. Reason: ${reason}`,
+        `Player ${socket.id} temporarily disconnected from room ${previousRoomCode}. Reason: ${reason}`,
       );
-    } else {
-      console.log(
-        `Player disconnected: ${socket.id}. Reason: ${reason}`,
-      );
+
+      return;
     }
+
+    console.log(
+      `Player disconnected: ${socket.id}. Reason: ${reason}`,
+    );
   });
 });
 
