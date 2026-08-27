@@ -4,10 +4,10 @@
     "target": "ES2022",
 
     // Use Node's modern module system for import and export statements.
-    "module": "NodeNext",
+    "module": "preserve",
 
     // Resolve imported files the same way modern Node.js does.
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "bundler",
 
     // Store compiled JavaScript files in server/dist.
     "outDir": "./dist",
@@ -25,7 +25,11 @@
     "skipLibCheck": true,
 
     // Prevent file-name casing problems across operating systems.
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "types": [
+      "node"
+    ]
   },
 
   // Compile only files inside the src folder.
