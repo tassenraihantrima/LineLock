@@ -144,13 +144,17 @@ const SERVER_URL =
 
 // Create one reusable typed Socket.IO client.
 //
-// Automatic connection remains disabled so the online page controls
-// when the browser opens and closes the connection.
+// Automatic connection remains disabled so the online page
+// controls when the browser opens and closes the connection.
+//
+// Authentication cookies are included in the Socket.IO
+// handshake so the server can identify the logged-in user.
 export const socket: Socket<
-    ServerToClientEvents,
-    ClientToServerEvents
+  ServerToClientEvents,
+  ClientToServerEvents
 > = io(SERVER_URL, {
-    autoConnect: false,
+  autoConnect: false,
+  withCredentials: true,
 });
 
 // Export the URL for the connection-information interface.

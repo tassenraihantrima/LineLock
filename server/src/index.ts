@@ -1,3 +1,5 @@
+import bcrypt from "bcryptjs";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
@@ -8,7 +10,28 @@ import {
   type Socket,
 } from "socket.io";
 
-// Load values from a future server .env file.
+import {
+  clearAuthCookie,
+  createAuthToken,
+  createPublicUser,
+  getAuthCookieName,
+  setAuthCookie,
+  verifyAuthToken,
+} from "./auth/auth";
+
+import {
+  authenticateRequest,
+  type AuthenticatedRequest,
+} from "./auth/authMiddleware";
+
+import type {
+  LoginPayload,
+  RegisterPayload,
+} from "./auth/authTypes";
+
+import { prisma } from "./lib/prisma";
+
+// Load values from the server .env file.
 dotenv.config({
   quiet: true,
 });
@@ -17,7 +40,9 @@ dotenv.config({
 type PlayerNumber = 1 | 2;
 
 // Represent every possible edge direction.
-type EdgeOrientation = "horizontal" | "vertical";
+type EdgeOrientation =
+  | "horizontal"
+  | "vertical";
 
 // Describe the data sent when the server accepts a connection.
 type ConnectionReadyPayload = {
@@ -82,19 +107,25 @@ type OnlineRoomPlayer = {
 
 // Store private recovery information that must never be
 // included in the public room object sent to browsers.
-type RoomPlayerRecord = OnlineRoomPlayer & {
-  recoveryToken: string;
-  disconnectTimer: ReturnType<typeof setTimeout> | null;
-};
+type RoomPlayerRecord =
+  OnlineRoomPlayer & {
+    userId: string;
+    recoveryToken: string;
+    disconnectTimer:
+    | ReturnType<typeof setTimeout>
+    | null;
+  };
 
 // Describe the public room sent to connected browsers.
 type OnlineRoom = {
   roomCode: string;
+
   status:
   | "waiting"
   | "ready"
   | "playing"
   | "complete";
+
   players: OnlineRoomPlayer[];
   gameState: ServerGameState | null;
 };
@@ -167,38 +198,53 @@ interface ClientToServerEvents {
 
   "room:create": (
     payload: CreateRoomPayload,
-    callback: (response: RoomActionResponse) => void,
+    callback: (
+      response: RoomActionResponse,
+    ) => void,
   ) => void;
 
   "room:join": (
     payload: JoinRoomPayload,
-    callback: (response: RoomActionResponse) => void,
+    callback: (
+      response: RoomActionResponse,
+    ) => void,
   ) => void;
 
   "room:recover": (
     payload: RecoverRoomPayload,
-    callback: (response: RoomActionResponse) => void,
+    callback: (
+      response: RoomActionResponse,
+    ) => void,
   ) => void;
 
   "room:leave": (
-    callback: (response: RoomActionResponse) => void,
+    callback: (
+      response: RoomActionResponse,
+    ) => void,
   ) => void;
 
   "game:start": (
-    callback: (response: RoomActionResponse) => void,
+    callback: (
+      response: RoomActionResponse,
+    ) => void,
   ) => void;
 
   "game:move": (
     payload: OnlineMovePayload,
-    callback: (response: RoomActionResponse) => void,
+    callback: (
+      response: RoomActionResponse,
+    ) => void,
   ) => void;
 }
 
 // No communication between multiple server processes is required yet.
 interface InterServerEvents { }
 
-// Store room membership on each connected socket.
+// Store authentication and room membership
+// on each connected Socket.IO client.
 interface SocketData {
+  userId?: string;
+  username?: string;
   roomCode?: string;
   playerName?: string;
   playerNumber?: PlayerNumber;
@@ -208,14 +254,17 @@ interface SocketData {
 const app = express();
 
 // Allow Express and Socket.IO to share one HTTP server.
-const httpServer = createServer(app);
+const httpServer =
+  createServer(app);
 
 // Use a deployment port when available.
-const PORT = Number(process.env.PORT) || 3001;
+const PORT =
+  Number(process.env.PORT) || 3001;
 
 // Keep disconnected players inside their room briefly so they
 // have an opportunity to recover their position.
-const RECONNECTION_GRACE_PERIOD_MS = 30_000;
+const RECONNECTION_GRACE_PERIOD_MS =
+  30_000;
 
 // Accept both common Vite development addresses.
 const allowedClientOrigins = [
@@ -224,16 +273,22 @@ const allowedClientOrigins = [
 ];
 
 // Store rooms inside the running server process.
-const rooms = new Map<string, RoomRecord>();
+const rooms =
+  new Map<string, RoomRecord>();
 
-// Allow the React application to access Express routes.
+// Allow the React application to access Express routes
+// and include authentication cookies in requests.
 app.use(
   cors({
     origin: allowedClientOrigins,
+    credentials: true,
   }),
 );
 
-// Allow Express to read JSON bodies.
+// Read cookies before authentication middleware uses them.
+app.use(cookieParser());
+
+// Allow Express to read JSON request bodies.
 app.use(express.json());
 
 // Create the typed Socket.IO server.
@@ -245,40 +300,62 @@ const io = new Server<
 >(httpServer, {
   cors: {
     origin: allowedClientOrigins,
-    methods: ["GET", "POST"],
+    methods: [
+      "GET",
+      "POST",
+    ],
+    credentials: true,
   },
 });
 
 // Remove extra whitespace and limit player names.
-function cleanPlayerName(playerName: string): string {
-  const cleanedName = playerName.trim().slice(0, 20);
+function cleanPlayerName(
+  playerName: string,
+): string {
+  const cleanedName =
+    playerName
+      .trim()
+      .slice(0, 20);
 
   return cleanedName || "Player";
 }
 
 // Normalize room codes before searching.
-function cleanRoomCode(roomCode: string): string {
-  return roomCode.trim().toUpperCase();
+function cleanRoomCode(
+  roomCode: string,
+): string {
+  return roomCode
+    .trim()
+    .toUpperCase();
 }
 
 // Create a private credential used to recover the same
 // player position after a temporary disconnection.
-function generateRecoveryToken(): string {
-  return randomBytes(32).toString("hex");
+function generateRecoveryToken():
+  string {
+  return randomBytes(32)
+    .toString("hex");
 }
 
 // Generate a unique six-character room code.
-function generateRoomCode(): string {
-  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function generateRoomCode():
+  string {
+  const characters =
+    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
   let roomCode = "";
 
   do {
     roomCode = Array.from(
-      { length: 6 },
+      {
+        length: 6,
+      },
       () =>
         characters[
-        Math.floor(Math.random() * characters.length)
+        Math.floor(
+          Math.random() *
+          characters.length,
+        )
         ],
     ).join("");
   } while (rooms.has(roomCode));
@@ -292,15 +369,21 @@ function createHorizontalEdges(
 ): ServerEdge[] {
   const edges: ServerEdge[] = [];
 
-  for (let row = 0; row < boardSize; row += 1) {
+  for (
+    let row = 0;
+    row < boardSize;
+    row += 1
+  ) {
     for (
       let column = 0;
       column < boardSize - 1;
       column += 1
     ) {
       edges.push({
-        id: `horizontal-${row}-${column}`,
-        orientation: "horizontal",
+        id:
+          `horizontal-${row}-${column}`,
+        orientation:
+          "horizontal",
         row,
         column,
         claimedBy: null,
@@ -328,8 +411,10 @@ function createVerticalEdges(
       column += 1
     ) {
       edges.push({
-        id: `vertical-${row}-${column}`,
-        orientation: "vertical",
+        id:
+          `vertical-${row}-${column}`,
+        orientation:
+          "vertical",
         row,
         column,
         claimedBy: null,
@@ -357,7 +442,8 @@ function createBoxes(
       column += 1
     ) {
       boxes.push({
-        id: `box-${row}-${column}`,
+        id:
+          `box-${row}-${column}`,
         row,
         column,
         claimedBy: null,
@@ -377,6 +463,7 @@ function createServerGameState(
 
   return {
     boardSize,
+
     players: [
       {
         number: 1,
@@ -389,13 +476,24 @@ function createServerGameState(
         score: 0,
       },
     ],
+
     edges: [
-      ...createHorizontalEdges(boardSize),
-      ...createVerticalEdges(boardSize),
+      ...createHorizontalEdges(
+        boardSize,
+      ),
+
+      ...createVerticalEdges(
+        boardSize,
+      ),
     ],
-    boxes: createBoxes(boardSize),
+
+    boxes:
+      createBoxes(boardSize),
+
     currentPlayer: 1,
+
     status: "playing",
+
     moveCount: 0,
   };
 }
@@ -409,7 +507,8 @@ function findEdge(
 ): ServerEdge | undefined {
   return edges.find(
     (edge) =>
-      edge.orientation === orientation &&
+      edge.orientation ===
+      orientation &&
       edge.row === row &&
       edge.column === column,
   );
@@ -420,39 +519,47 @@ function isBoxComplete(
   box: ServerBox,
   edges: ServerEdge[],
 ): boolean {
-  const topEdge = findEdge(
-    edges,
-    "horizontal",
-    box.row,
-    box.column,
-  );
+  const topEdge =
+    findEdge(
+      edges,
+      "horizontal",
+      box.row,
+      box.column,
+    );
 
-  const bottomEdge = findEdge(
-    edges,
-    "horizontal",
-    box.row + 1,
-    box.column,
-  );
+  const bottomEdge =
+    findEdge(
+      edges,
+      "horizontal",
+      box.row + 1,
+      box.column,
+    );
 
-  const leftEdge = findEdge(
-    edges,
-    "vertical",
-    box.row,
-    box.column,
-  );
+  const leftEdge =
+    findEdge(
+      edges,
+      "vertical",
+      box.row,
+      box.column,
+    );
 
-  const rightEdge = findEdge(
-    edges,
-    "vertical",
-    box.row,
-    box.column + 1,
-  );
+  const rightEdge =
+    findEdge(
+      edges,
+      "vertical",
+      box.row,
+      box.column + 1,
+    );
 
   return (
-    topEdge?.claimedBy !== null &&
-    bottomEdge?.claimedBy !== null &&
-    leftEdge?.claimedBy !== null &&
-    rightEdge?.claimedBy !== null
+    topEdge?.claimedBy !==
+    null &&
+    bottomEdge?.claimedBy !==
+    null &&
+    leftEdge?.claimedBy !==
+    null &&
+    rightEdge?.claimedBy !==
+    null
   );
 }
 
@@ -463,7 +570,10 @@ function areAllRoomPlayersConnected(
 ): boolean {
   return (
     room.players.length === 2 &&
-    room.players.every((player) => player.isConnected)
+    room.players.every(
+      (player) =>
+        player.isConnected,
+    )
   );
 }
 
@@ -471,7 +581,9 @@ function areAllRoomPlayersConnected(
 function getOtherPlayer(
   currentPlayer: PlayerNumber,
 ): PlayerNumber {
-  return currentPlayer === 1 ? 2 : 1;
+  return currentPlayer === 1
+    ? 2
+    : 1;
 }
 
 // Determine whether every online edge has been claimed.
@@ -479,7 +591,8 @@ function isServerGameComplete(
   gameState: ServerGameState,
 ): boolean {
   return (
-    gameState.moveCount >= gameState.edges.length
+    gameState.moveCount >=
+    gameState.edges.length
   );
 }
 
@@ -490,37 +603,58 @@ function applyServerMove(
   movingPlayer: PlayerNumber,
 ): ServerGameState {
   // Assign the selected edge to the moving player.
-  const updatedEdges = gameState.edges.map((edge) => {
-    if (edge.id !== edgeId) {
-      return edge;
-    }
+  const updatedEdges =
+    gameState.edges.map(
+      (edge) => {
+        if (
+          edge.id !== edgeId
+        ) {
+          return edge;
+        }
 
-    return {
-      ...edge,
-      claimedBy: movingPlayer,
-    };
-  });
+        return {
+          ...edge,
+          claimedBy:
+            movingPlayer,
+        };
+      },
+    );
 
   // Find every newly completed box.
-  const newlyCompletedBoxIds = gameState.boxes
-    .filter(
-      (box) =>
-        box.claimedBy === null &&
-        isBoxComplete(box, updatedEdges),
-    )
-    .map((box) => box.id);
+  const newlyCompletedBoxIds =
+    gameState.boxes
+      .filter(
+        (box) =>
+          box.claimedBy ===
+          null &&
+          isBoxComplete(
+            box,
+            updatedEdges,
+          ),
+      )
+      .map(
+        (box) => box.id,
+      );
 
   // Assign newly completed boxes to the moving player.
-  const updatedBoxes = gameState.boxes.map((box) => {
-    if (!newlyCompletedBoxIds.includes(box.id)) {
-      return box;
-    }
+  const updatedBoxes =
+    gameState.boxes.map(
+      (box) => {
+        if (
+          !newlyCompletedBoxIds.includes(
+            box.id,
+          )
+        ) {
+          return box;
+        }
 
-    return {
-      ...box,
-      claimedBy: movingPlayer,
-    };
-  });
+        return {
+          ...box,
+          claimedBy:
+            movingPlayer,
+        };
+      },
+    );
 
   const completedBoxCount =
     newlyCompletedBoxIds.length;
@@ -530,20 +664,32 @@ function applyServerMove(
     ServerPlayer,
     ServerPlayer,
   ] = [
-      gameState.players[0].number === movingPlayer
+      gameState.players[0]
+        .number ===
+        movingPlayer
         ? {
-          ...gameState.players[0],
+          ...gameState
+            .players[0],
+
           score:
-            gameState.players[0].score +
+            gameState
+              .players[0]
+              .score +
             completedBoxCount,
         }
         : gameState.players[0],
 
-      gameState.players[1].number === movingPlayer
+      gameState.players[1]
+        .number ===
+        movingPlayer
         ? {
-          ...gameState.players[1],
+          ...gameState
+            .players[1],
+
           score:
-            gameState.players[1].score +
+            gameState
+              .players[1]
+              .score +
             completedBoxCount,
         }
         : gameState.players[1],
@@ -553,15 +699,28 @@ function applyServerMove(
   const nextPlayer =
     completedBoxCount > 0
       ? movingPlayer
-      : getOtherPlayer(movingPlayer);
+      : getOtherPlayer(
+        movingPlayer,
+      );
 
   return {
     ...gameState,
-    edges: updatedEdges,
-    boxes: updatedBoxes,
-    players: updatedPlayers,
-    currentPlayer: nextPlayer,
-    moveCount: gameState.moveCount + 1,
+
+    edges:
+      updatedEdges,
+
+    boxes:
+      updatedBoxes,
+
+    players:
+      updatedPlayers,
+
+    currentPlayer:
+      nextPlayer,
+
+    moveCount:
+      gameState.moveCount +
+      1,
   };
 }
 
@@ -571,48 +730,90 @@ function createRoomSummary(
 ): OnlineRoom {
   const gameIsComplete =
     room.gameState !== null &&
-    isServerGameComplete(room.gameState);
+    isServerGameComplete(
+      room.gameState,
+    );
 
-  let status: OnlineRoom["status"];
+  let status:
+    OnlineRoom["status"];
 
-  if (room.players.length < 2) {
+  if (
+    room.players.length < 2
+  ) {
     status = "waiting";
-  } else if (!room.gameState) {
+  } else if (
+    !room.gameState
+  ) {
     status = "ready";
-  } else if (gameIsComplete) {
+  } else if (
+    gameIsComplete
+  ) {
     status = "complete";
   } else {
     status = "playing";
   }
 
   return {
-    roomCode: room.roomCode,
+    roomCode:
+      room.roomCode,
+
     status,
-    players: room.players.map((player) => ({
-      socketId: player.socketId,
-      name: player.name,
-      playerNumber: player.playerNumber,
-      isConnected: player.isConnected,
-    })),
-    gameState: room.gameState
-      ? {
-        ...room.gameState,
-        players: [
-          {
-            ...room.gameState.players[0],
-          },
-          {
-            ...room.gameState.players[1],
-          },
-        ],
-        edges: room.gameState.edges.map((edge) => ({
-          ...edge,
-        })),
-        boxes: room.gameState.boxes.map((box) => ({
-          ...box,
-        })),
-      }
-      : null,
+
+    // Only expose public player information.
+    // Recovery tokens and timers remain private on the server.
+    players:
+      room.players.map(
+        (player) => ({
+          socketId:
+            player.socketId,
+
+          name:
+            player.name,
+
+          playerNumber:
+            player.playerNumber,
+
+          isConnected:
+            player.isConnected,
+        }),
+      ),
+
+    gameState:
+      room.gameState
+        ? {
+          ...room.gameState,
+
+          players: [
+            {
+              ...room
+                .gameState
+                .players[0],
+            },
+
+            {
+              ...room
+                .gameState
+                .players[1],
+            },
+          ],
+
+          edges:
+            room.gameState
+              .edges.map(
+                (edge) => ({
+                  ...edge,
+                }),
+              ),
+
+          boxes:
+            room.gameState
+              .boxes.map(
+                (box) => ({
+                  ...box,
+                }),
+              ),
+        }
+        : null,
   };
 }
 
@@ -620,9 +821,13 @@ function createRoomSummary(
 function broadcastRoomUpdate(
   room: RoomRecord,
 ): void {
-  io.to(room.roomCode).emit(
+  io.to(
+    room.roomCode,
+  ).emit(
     "room:updated",
-    createRoomSummary(room),
+    createRoomSummary(
+      room,
+    ),
   );
 }
 
@@ -630,9 +835,13 @@ function broadcastRoomUpdate(
 function broadcastGameUpdate(
   room: RoomRecord,
 ): void {
-  io.to(room.roomCode).emit(
+  io.to(
+    room.roomCode,
+  ).emit(
     "game:updated",
-    createRoomSummary(room),
+    createRoomSummary(
+      room,
+    ),
   );
 }
 
@@ -642,34 +851,47 @@ function expireDisconnectedPlayer(
   roomCode: string,
   recoveryToken: string,
 ): void {
-  const room = rooms.get(roomCode);
+  const room =
+    rooms.get(roomCode);
 
   if (!room) {
     return;
   }
 
-  const disconnectedPlayer = room.players.find(
-    (player) =>
-      player.recoveryToken === recoveryToken &&
-      !player.isConnected,
-  );
+  const disconnectedPlayer =
+    room.players.find(
+      (player) =>
+        player.recoveryToken ===
+        recoveryToken &&
+        !player.isConnected,
+    );
 
   // The player may already have recovered before this timer fired.
-  if (!disconnectedPlayer) {
+  if (
+    !disconnectedPlayer
+  ) {
     return;
   }
 
-  room.players = room.players.filter(
-    (player) => player.recoveryToken !== recoveryToken,
-  );
+  room.players =
+    room.players.filter(
+      (player) =>
+        player.recoveryToken !==
+        recoveryToken,
+    );
 
   console.log(
     `${disconnectedPlayer.name}'s recovery period expired in room ${roomCode}.`,
   );
 
   // Delete the room if nobody remains.
-  if (room.players.length === 0) {
-    rooms.delete(roomCode);
+  if (
+    room.players.length ===
+    0
+  ) {
+    rooms.delete(
+      roomCode,
+    );
 
     console.log(
       `Room deleted after reconnection timeout: ${roomCode}`,
@@ -683,25 +905,45 @@ function expireDisconnectedPlayer(
   room.gameState = null;
 
   // The remaining player becomes Player 1.
-  room.players = room.players.map((player, index) => ({
-    ...player,
-    playerNumber: (index + 1) as PlayerNumber,
-    disconnectTimer: null,
-  }));
+  room.players =
+    room.players.map(
+      (
+        player,
+        index,
+      ) => ({
+        ...player,
 
-  const remainingPlayer = room.players[0];
+        playerNumber:
+          (index +
+            1) as PlayerNumber,
 
-  if (remainingPlayer) {
-    const remainingSocket = io.sockets.sockets.get(
-      remainingPlayer.socketId,
+        disconnectTimer:
+          null,
+      }),
     );
 
-    if (remainingSocket) {
-      remainingSocket.data.playerNumber = 1;
+  const remainingPlayer =
+    room.players[0];
+
+  if (
+    remainingPlayer
+  ) {
+    const remainingSocket =
+      io.sockets.sockets.get(
+        remainingPlayer.socketId,
+      );
+
+    if (
+      remainingSocket
+    ) {
+      remainingSocket.data
+        .playerNumber = 1;
     }
   }
 
-  broadcastRoomUpdate(room);
+  broadcastRoomUpdate(
+    room,
+  );
 }
 
 // Preserve a player's room position and authoritative game state
@@ -714,39 +956,53 @@ function markPlayerDisconnected(
     SocketData
   >,
 ): void {
-  const roomCode = socket.data.roomCode;
+  const roomCode =
+    socket.data.roomCode;
 
   if (!roomCode) {
     return;
   }
 
-  const room = rooms.get(roomCode);
+  const room =
+    rooms.get(roomCode);
 
   if (!room) {
     return;
   }
 
-  const player = room.players.find(
-    (roomPlayer) => roomPlayer.socketId === socket.id,
-  );
+  const player =
+    room.players.find(
+      (roomPlayer) =>
+        roomPlayer.socketId ===
+        socket.id,
+    );
 
   if (!player) {
     return;
   }
 
-  player.isConnected = false;
+  player.isConnected =
+    false;
 
   // Defensive cleanup in case an older timer somehow exists.
-  if (player.disconnectTimer) {
-    clearTimeout(player.disconnectTimer);
+  if (
+    player.disconnectTimer
+  ) {
+    clearTimeout(
+      player.disconnectTimer,
+    );
   }
 
-  player.disconnectTimer = setTimeout(() => {
-    expireDisconnectedPlayer(
-      roomCode,
-      player.recoveryToken,
+  player.disconnectTimer =
+    setTimeout(
+      () => {
+        expireDisconnectedPlayer(
+          roomCode,
+          player.recoveryToken,
+        );
+      },
+      RECONNECTION_GRACE_PERIOD_MS,
     );
-  }, RECONNECTION_GRACE_PERIOD_MS);
 
   console.log(
     `${player.name} can recover room ${roomCode} for the next 30 seconds.`,
@@ -754,7 +1010,9 @@ function markPlayerDisconnected(
 
   // Keep the player and game state in the room.
   // Only their connection status changes.
-  broadcastRoomUpdate(room);
+  broadcastRoomUpdate(
+    room,
+  );
 }
 
 // Remove a socket from its current room.
@@ -766,44 +1024,72 @@ function removeSocketFromRoom(
     SocketData
   >,
 ): OnlineRoom | null {
-  const roomCode = socket.data.roomCode;
+  const roomCode =
+    socket.data.roomCode;
 
   if (!roomCode) {
     return null;
   }
 
-  const room = rooms.get(roomCode);
+  const room =
+    rooms.get(roomCode);
 
   if (room) {
-    const player = room.players.find(
-      (roomPlayer) => roomPlayer.socketId === socket.id,
-    );
+    const player =
+      room.players.find(
+        (roomPlayer) =>
+          roomPlayer.socketId ===
+          socket.id,
+      );
 
-    if (player?.disconnectTimer) {
-      clearTimeout(player.disconnectTimer);
-      player.disconnectTimer = null;
+    if (
+      player?.disconnectTimer
+    ) {
+      clearTimeout(
+        player.disconnectTimer,
+      );
+
+      player.disconnectTimer =
+        null;
     }
   }
 
-  socket.leave(roomCode);
+  socket.leave(
+    roomCode,
+  );
 
-  socket.data.roomCode = undefined;
-  socket.data.playerName = undefined;
-  socket.data.playerNumber = undefined;
+  socket.data.roomCode =
+    undefined;
+
+  socket.data.playerName =
+    undefined;
+
+  socket.data.playerNumber =
+    undefined;
 
   if (!room) {
     return null;
   }
 
-  room.players = room.players.filter(
-    (player) => player.socketId !== socket.id,
-  );
+  room.players =
+    room.players.filter(
+      (player) =>
+        player.socketId !==
+        socket.id,
+    );
 
   // Delete rooms after their final player leaves.
-  if (room.players.length === 0) {
-    rooms.delete(roomCode);
+  if (
+    room.players.length ===
+    0
+  ) {
+    rooms.delete(
+      roomCode,
+    );
 
-    console.log(`Room deleted: ${roomCode}`);
+    console.log(
+      `Room deleted: ${roomCode}`,
+    );
 
     return {
       roomCode,
@@ -817,556 +1103,1423 @@ function removeSocketFromRoom(
   room.gameState = null;
 
   // The remaining member becomes Player 1.
-  room.players = room.players.map((player, index) => ({
-    ...player,
-    playerNumber: (index + 1) as PlayerNumber,
-  }));
+  room.players =
+    room.players.map(
+      (
+        player,
+        index,
+      ) => ({
+        ...player,
 
-  const remainingSocket = io.sockets.sockets.get(
-    room.players[0].socketId,
-  );
+        playerNumber:
+          (index +
+            1) as PlayerNumber,
+      }),
+    );
 
-  if (remainingSocket) {
-    remainingSocket.data.playerNumber = 1;
+  const remainingSocket =
+    io.sockets.sockets.get(
+      room.players[0]
+        .socketId,
+    );
+
+  if (
+    remainingSocket
+  ) {
+    remainingSocket.data
+      .playerNumber = 1;
   }
 
-  broadcastRoomUpdate(room);
+  broadcastRoomUpdate(
+    room,
+  );
 
-  return createRoomSummary(room);
+  return createRoomSummary(
+    room,
+  );
 }
 
 // Confirm that the Express server is running.
-app.get("/", (_request, response) => {
-  response.json({
-    message: "LineLock server is running.",
-  });
-});
+app.get(
+  "/",
+  (
+    _request,
+    response,
+  ) => {
+    response.json({
+      message:
+        "LineLock server is running.",
+    });
+  },
+);
 
 // Provide server-health and room-count information.
-app.get("/api/health", (_request, response) => {
-  response.status(200).json({
-    status: "ok",
-    application: "LineLock",
-    realtime: "Socket.IO",
-    activeRooms: rooms.size,
-  });
-});
+app.get(
+  "/api/health",
+  (
+    _request,
+    response,
+  ) => {
+    response
+      .status(200)
+      .json({
+        status: "ok",
 
-// Handle every connected browser.
-io.on("connection", (socket) => {
-  console.log(`Player connected: ${socket.id}`);
+        application:
+          "LineLock",
 
-  // Confirm the connection immediately.
-  socket.emit("server:connection-ready", {
-    socketId: socket.id,
-    message:
-      "The LineLock client is connected to the real-time server.",
-    connectedAt: new Date().toISOString(),
-  });
+        realtime:
+          "Socket.IO",
 
-  // Respond to latency tests.
-  socket.on("client:ping", (payload) => {
-    socket.emit("server:pong", {
-      sentAt: payload.sentAt,
-      receivedAt: Date.now(),
+        activeRooms:
+          rooms.size,
+      });
+  },
+);
+
+// Create a new persistent LineLock account.
+app.post(
+  "/api/auth/register",
+  async (
+    request,
+    response,
+  ) => {
+    const body =
+      request.body as
+      RegisterPayload;
+
+    // Normalize the account information before validation.
+    const email =
+      body.email
+        ?.trim()
+        .toLowerCase();
+
+    const username =
+      body.username
+        ?.trim();
+
+    const password =
+      body.password ?? "";
+
+    // All three registration fields are required.
+    if (
+      !email ||
+      !username ||
+      !password
+    ) {
+      response
+        .status(400)
+        .json({
+          success: false,
+
+          message:
+            "Email, username, and password are required.",
+        });
+
+      return;
+    }
+
+    // Keep usernames readable and suitable for game interfaces.
+    if (
+      username.length < 3
+    ) {
+      response
+        .status(400)
+        .json({
+          success: false,
+
+          message:
+            "Username must contain at least 3 characters.",
+        });
+
+      return;
+    }
+
+    if (
+      username.length > 20
+    ) {
+      response
+        .status(400)
+        .json({
+          success: false,
+
+          message:
+            "Username cannot exceed 20 characters.",
+        });
+
+      return;
+    }
+
+    // Require a basic minimum password length.
+    if (
+      password.length < 8
+    ) {
+      response
+        .status(400)
+        .json({
+          success: false,
+
+          message:
+            "Password must contain at least 8 characters.",
+        });
+
+      return;
+    }
+
+    try {
+      // Prevent duplicate email addresses and usernames.
+      const existingUser =
+        await prisma.user
+          .findFirst({
+            where: {
+              OR: [
+                {
+                  email,
+                },
+
+                {
+                  username,
+                },
+              ],
+            },
+          });
+
+      if (
+        existingUser
+      ) {
+        response
+          .status(409)
+          .json({
+            success: false,
+
+            message:
+              existingUser.email ===
+                email
+                ? "An account already uses that email."
+                : "That username is already taken.",
+          });
+
+        return;
+      }
+
+      // Hash the password before it ever reaches PostgreSQL.
+      const passwordHash =
+        await bcrypt.hash(
+          password,
+          12,
+        );
+
+      // Store the persistent account in the Neon database.
+      const user =
+        await prisma.user
+          .create({
+            data: {
+              email,
+              username,
+              passwordHash,
+            },
+          });
+
+      // Automatically authenticate a successfully registered user.
+      const token =
+        createAuthToken(
+          user.id,
+        );
+
+      setAuthCookie(
+        response,
+        token,
+      );
+
+      // Return only public account information.
+      response
+        .status(201)
+        .json({
+          success: true,
+
+          user:
+            createPublicUser(
+              user,
+            ),
+        });
+    } catch (error) {
+      console.error(
+        "Registration failed:",
+        error,
+      );
+
+      response
+        .status(500)
+        .json({
+          success: false,
+
+          message:
+            "Unable to create the account.",
+        });
+    }
+  },
+);
+
+// Authenticate an existing LineLock account.
+app.post(
+  "/api/auth/login",
+  async (
+    request,
+    response,
+  ) => {
+    const body =
+      request.body as
+      LoginPayload;
+
+    const email =
+      body.email
+        ?.trim()
+        .toLowerCase();
+
+    const password =
+      body.password ?? "";
+
+    if (
+      !email ||
+      !password
+    ) {
+      response
+        .status(400)
+        .json({
+          success: false,
+
+          message:
+            "Email and password are required.",
+        });
+
+      return;
+    }
+
+    try {
+      // Find the persistent account using its unique email address.
+      const user =
+        await prisma.user
+          .findUnique({
+            where: {
+              email,
+            },
+          });
+
+      // Use the same response for an unknown email and wrong password.
+      if (!user) {
+        response
+          .status(401)
+          .json({
+            success: false,
+
+            message:
+              "The email or password is incorrect.",
+          });
+
+        return;
+      }
+
+      // Compare the submitted password against the bcrypt hash.
+      const passwordMatches =
+        await bcrypt.compare(
+          password,
+          user.passwordHash,
+        );
+
+      if (
+        !passwordMatches
+      ) {
+        response
+          .status(401)
+          .json({
+            success: false,
+
+            message:
+              "The email or password is incorrect.",
+          });
+
+        return;
+      }
+
+      // Create a fresh authenticated session.
+      const token =
+        createAuthToken(
+          user.id,
+        );
+
+      setAuthCookie(
+        response,
+        token,
+      );
+
+      response.json({
+        success: true,
+
+        user:
+          createPublicUser(
+            user,
+          ),
+      });
+    } catch (error) {
+      console.error(
+        "Login failed:",
+        error,
+      );
+
+      response
+        .status(500)
+        .json({
+          success: false,
+
+          message:
+            "Unable to log in.",
+        });
+    }
+  },
+);
+
+// Return the account represented by the current authentication cookie.
+app.get(
+  "/api/auth/me",
+  authenticateRequest,
+  async (
+    request:
+      AuthenticatedRequest,
+    response,
+  ) => {
+    // Authentication middleware should always provide this value,
+    // but keep a defensive check before querying the database.
+    const userId =
+      request.userId;
+
+    if (!userId) {
+      response
+        .status(401)
+        .json({
+          success: false,
+
+          message:
+            "Authentication is required.",
+        });
+
+      return;
+    }
+
+    try {
+      const user =
+        await prisma.user
+          .findUnique({
+            where: {
+              id: userId,
+            },
+          });
+
+      // Clear stale authentication if the database account disappeared.
+      if (!user) {
+        clearAuthCookie(
+          response,
+        );
+
+        response
+          .status(401)
+          .json({
+            success: false,
+
+            message:
+              "The account no longer exists.",
+          });
+
+        return;
+      }
+
+      response.json({
+        success: true,
+
+        user:
+          createPublicUser(
+            user,
+          ),
+      });
+    } catch (error) {
+      console.error(
+        "Account lookup failed:",
+        error,
+      );
+
+      response
+        .status(500)
+        .json({
+          success: false,
+
+          message:
+            "Unable to load the account.",
+        });
+    }
+  },
+);
+
+// End the current LineLock authentication session.
+app.post(
+  "/api/auth/logout",
+  (
+    _request,
+    response,
+  ) => {
+    clearAuthCookie(
+      response,
+    );
+
+    response.json({
+      success: true,
     });
-  });
+  },
+);
 
-  // Create a new multiplayer room.
-  socket.on(
-    "room:create",
-    (payload, callback) => {
-      removeSocketFromRoom(socket);
+// Authenticate every Socket.IO connection before allowing
+// the browser to use LineLock's online multiplayer server.
+io.use(
+  async (
+    socket,
+    next,
+  ) => {
+    try {
+      // Cookies are sent as one header during the Socket.IO handshake.
+      const cookieHeader =
+        socket.handshake
+          .headers.cookie;
 
-      const playerName = cleanPlayerName(
-        payload.playerName,
-      );
-
-      const roomCode = generateRoomCode();
-
-      const recoveryToken = generateRecoveryToken();
-
-      const room: RoomRecord = {
-        roomCode,
-        players: [
-          {
-            socketId: socket.id,
-            name: playerName,
-            playerNumber: 1,
-            isConnected: true,
-            recoveryToken,
-            disconnectTimer: null,
-          },
-        ],
-        gameState: null,
-      };
-
-      rooms.set(roomCode, room);
-
-      socket.join(roomCode);
-      socket.data.roomCode = roomCode;
-      socket.data.playerName = playerName;
-      socket.data.playerNumber = 1;
-
-      const roomSummary = createRoomSummary(room);
-
-      console.log(
-        `${playerName} created room ${roomCode}`,
-      );
-
-      callback({
-        success: true,
-        room: roomSummary,
-        recoveryToken,
-      });
-
-      broadcastRoomUpdate(room);
-    },
-  );
-
-  // Join an existing room as Player 2.
-  socket.on(
-    "room:join",
-    (payload, callback) => {
-      const roomCode = cleanRoomCode(
-        payload.roomCode,
-      );
-
-      const playerName = cleanPlayerName(
-        payload.playerName,
-      );
-
-      const room = rooms.get(roomCode);
-
-      if (!room) {
-        callback({
-          success: false,
-          message:
-            "No active room was found with that code.",
-        });
+      if (!cookieHeader) {
+        next(
+          new Error(
+            "Authentication is required.",
+          ),
+        );
 
         return;
       }
 
-      if (room.players.length >= 2) {
-        callback({
-          success: false,
-          message:
-            "That room already has two players.",
-        });
+      const cookieName =
+        getAuthCookieName();
 
-        return;
-      }
-
-      removeSocketFromRoom(socket);
-
-      const recoveryToken = generateRecoveryToken();
-
-      room.players.push({
-        socketId: socket.id,
-        name: playerName,
-        playerNumber: 2,
-        isConnected: true,
-        recoveryToken,
-        disconnectTimer: null,
-      });
-      socket.join(roomCode);
-      socket.data.roomCode = roomCode;
-      socket.data.playerName = playerName;
-      socket.data.playerNumber = 2;
-
-      const roomSummary = createRoomSummary(room);
-
-      console.log(
-        `${playerName} joined room ${roomCode}`,
-      );
-
-      callback({
-        success: true,
-        room: roomSummary,
-        recoveryToken,
-      });
-
-      broadcastRoomUpdate(room);
-    },
-  );
-
-  // Recover a player's existing room position after a
-  // temporary Socket.IO disconnection.
-  socket.on(
-    "room:recover",
-    (payload, callback) => {
-      const roomCode = cleanRoomCode(
-        payload.roomCode,
-      );
-
-      const recoveryToken =
-        payload.recoveryToken.trim();
-
-      if (!roomCode || !recoveryToken) {
-        callback({
-          success: false,
-          message:
-            "Room recovery information is incomplete.",
-        });
-
-        return;
-      }
-
-      // A socket already participating in a room should not
-      // recover a second player identity.
-      if (socket.data.roomCode) {
-        callback({
-          success: false,
-          message:
-            "Leave the current room before recovering another room.",
-        });
-
-        return;
-      }
-
-      const room = rooms.get(roomCode);
-
-      if (!room) {
-        callback({
-          success: false,
-          message:
-            "The room is no longer available.",
-        });
-
-        return;
-      }
-
-      const recoveringPlayer = room.players.find(
-        (player) =>
-          player.recoveryToken === recoveryToken,
-      );
-
-      if (!recoveringPlayer) {
-        callback({
-          success: false,
-          message:
-            "The recovery token is not valid for this room.",
-        });
-
-        return;
-      }
-
-      if (recoveringPlayer.isConnected) {
-        const existingSocket =
-          io.sockets.sockets.get(
-            recoveringPlayer.socketId,
+      // Find LineLock's authentication cookie without exposing
+      // the token to the public room state.
+      const authCookie =
+        cookieHeader
+          .split(";")
+          .map(
+            (cookie) =>
+              cookie.trim(),
+          )
+          .find(
+            (cookie) =>
+              cookie.startsWith(
+                `${cookieName}=`,
+              ),
           );
 
-        if (existingSocket?.connected) {
+      if (!authCookie) {
+        next(
+          new Error(
+            "Authentication is required.",
+          ),
+        );
+
+        return;
+      }
+
+      // Extract and verify the signed JWT stored in the cookie.
+      const token =
+        decodeURIComponent(
+          authCookie.slice(
+            `${cookieName}=`
+              .length,
+          ),
+        );
+
+      const payload =
+        verifyAuthToken(
+          token,
+        );
+
+      if (!payload) {
+        next(
+          new Error(
+            "Your session is invalid or expired.",
+          ),
+        );
+
+        return;
+      }
+
+      // Confirm that the authenticated database account still exists.
+      const user =
+        await prisma.user
+          .findUnique({
+            where: {
+              id:
+                payload.userId,
+            },
+
+            select: {
+              id: true,
+              username: true,
+            },
+          });
+
+      if (!user) {
+        next(
+          new Error(
+            "The authenticated account no longer exists.",
+          ),
+        );
+
+        return;
+      }
+
+      // Store the persistent database identity on the socket.
+      // Later room logic can use this instead of trusting the browser.
+      socket.data.userId =
+        user.id;
+
+      socket.data.username =
+        user.username;
+
+      next();
+    } catch (error) {
+      console.error(
+        "Socket authentication failed:",
+        error,
+      );
+
+      next(
+        new Error(
+          "Unable to authenticate the Socket.IO connection.",
+        ),
+      );
+    }
+  },
+);
+
+// Handle every authenticated browser.
+io.on(
+  "connection",
+  (socket) => {
+    console.log(
+      `Authenticated player connected: ${socket.id}`,
+    );
+
+    // Confirm the connection immediately.
+    socket.emit(
+      "server:connection-ready",
+      {
+        socketId:
+          socket.id,
+
+        message:
+          "The LineLock client is connected to the real-time server.",
+
+        connectedAt:
+          new Date()
+            .toISOString(),
+      },
+    );
+
+    // Respond to latency tests.
+    socket.on(
+      "client:ping",
+      (payload) => {
+        socket.emit(
+          "server:pong",
+          {
+            sentAt:
+              payload.sentAt,
+
+            receivedAt:
+              Date.now(),
+          },
+        );
+      },
+    );
+
+    // Create a new multiplayer room.
+    socket.on(
+      "room:create",
+      (
+        payload,
+        callback,
+      ) => {
+        removeSocketFromRoom(
+          socket,
+        );
+
+        const userId = socket.data.userId;
+        const username = socket.data.username;
+
+        if (!userId || !username) {
+          callback({ success: false, message: "Authentication is required before creating a room." });
+          return;
+        }
+
+        const playerName = cleanPlayerName(username);
+
+        const roomCode =
+          generateRoomCode();
+
+        const recoveryToken =
+          generateRecoveryToken();
+
+        const room:
+          RoomRecord = {
+          roomCode,
+
+          players: [
+            {
+              socketId:
+                socket.id,
+
+              userId,
+
+              name:
+                playerName,
+
+              playerNumber:
+                1,
+
+              isConnected:
+                true,
+
+              recoveryToken,
+
+              disconnectTimer:
+                null,
+            },
+          ],
+
+          gameState: null,
+        };
+
+        rooms.set(
+          roomCode,
+          room,
+        );
+
+        socket.join(
+          roomCode,
+        );
+
+        socket.data.roomCode =
+          roomCode;
+
+        socket.data.playerName =
+          playerName;
+
+        socket.data.playerNumber =
+          1;
+
+        const roomSummary =
+          createRoomSummary(
+            room,
+          );
+
+        console.log(
+          `${playerName} created room ${roomCode}`,
+        );
+
+        callback({
+          success: true,
+          room:
+            roomSummary,
+          recoveryToken,
+        });
+
+        broadcastRoomUpdate(
+          room,
+        );
+      },
+    );
+
+    // Join an existing room as Player 2.
+    socket.on(
+      "room:join",
+      (
+        payload,
+        callback,
+      ) => {
+        const roomCode =
+          cleanRoomCode(
+            payload.roomCode,
+          );
+
+        const userId = socket.data.userId;
+        const username = socket.data.username;
+
+        if (!userId || !username) {
+          callback({ success: false, message: "Authentication is required before joining a room." });
+          return;
+        }
+
+        const playerName = cleanPlayerName(username);
+
+        const room =
+          rooms.get(
+            roomCode,
+          );
+
+        if (!room) {
           callback({
             success: false,
+
             message:
-              "That player is already connected to the room.",
+              "No active room was found with that code.",
           });
 
           return;
         }
 
-        // Defensive correction if the old socket disappeared
-        // before its disconnect event updated the room record.
-        recoveringPlayer.isConnected = false;
-      }
-
-      if (recoveringPlayer.disconnectTimer) {
-        clearTimeout(
-          recoveringPlayer.disconnectTimer,
+        const existingAccount = room.players.find(
+          (player) => player.userId === userId,
         );
 
-        recoveringPlayer.disconnectTimer = null;
-      }
+        if (existingAccount) {
+          callback({
+            success: false,
+            message: "This account already belongs to that room.",
+          });
+          return;
+        }
 
-      // Replace the old temporary Socket.IO identity.
-      recoveringPlayer.socketId = socket.id;
-      recoveringPlayer.isConnected = true;
+        if (
+          room.players.length >=
+          2
+        ) {
+          callback({
+            success: false,
 
-      socket.join(roomCode);
+            message:
+              "That room already has two players.",
+          });
 
-      socket.data.roomCode = roomCode;
-      socket.data.playerName =
-        recoveringPlayer.name;
-      socket.data.playerNumber =
-        recoveringPlayer.playerNumber;
+          return;
+        }
 
-      const roomSummary =
-        createRoomSummary(room);
-
-      console.log(
-        `${recoveringPlayer.name} recovered Player ${recoveringPlayer.playerNumber} in room ${roomCode}.`,
-      );
-
-      callback({
-        success: true,
-        room: roomSummary,
-        recoveryToken:
-          recoveringPlayer.recoveryToken,
-      });
-
-      broadcastRoomUpdate(room);
-
-      if (room.gameState) {
-        broadcastGameUpdate(room);
-      }
-    },
-  );
-
-  // Allow a player to leave manually.
-  socket.on("room:leave", (callback) => {
-    const previousRoomCode =
-      socket.data.roomCode;
-
-    if (!previousRoomCode) {
-      callback({
-        success: false,
-        message:
-          "This player is not currently inside a room.",
-      });
-
-      return;
-    }
-
-    const updatedRoom =
-      removeSocketFromRoom(socket);
-
-    console.log(
-      `Player ${socket.id} left room ${previousRoomCode}`,
-    );
-
-    callback({
-      success: true,
-      room:
-        updatedRoom ?? {
-          roomCode: previousRoomCode,
-          status: "waiting",
-          players: [],
-          gameState: null,
-        },
-    });
-  });
-
-  // Start a new authoritative game.
-  socket.on("game:start", (callback) => {
-    const roomCode = socket.data.roomCode;
-
-    if (!roomCode) {
-      callback({
-        success: false,
-        message:
-          "Join a room before starting a game.",
-      });
-
-      return;
-    }
-
-    const room = rooms.get(roomCode);
-
-    if (!room) {
-      callback({
-        success: false,
-        message:
-          "The current room no longer exists.",
-      });
-
-      return;
-    }
-
-    if (!areAllRoomPlayersConnected(room)) {
-      callback({
-        success: false,
-        message:
-          "Two players must be connected before the game can start.",
-      });
-
-      return;
-    }
-
-    if (socket.data.playerNumber !== 1) {
-      callback({
-        success: false,
-        message:
-          "Only Player 1 can start the online match.",
-      });
-
-      return;
-    }
-
-    const playerOne = room.players.find(
-      (player) => player.playerNumber === 1,
-    );
-
-    const playerTwo = room.players.find(
-      (player) => player.playerNumber === 2,
-    );
-
-    if (!playerOne || !playerTwo) {
-      callback({
-        success: false,
-        message:
-          "Both player positions must be available.",
-      });
-
-      return;
-    }
-
-    room.gameState = createServerGameState(
-      playerOne.name,
-      playerTwo.name,
-    );
-
-    const roomSummary = createRoomSummary(room);
-
-    console.log(
-      `Online game started in room ${roomCode}`,
-    );
-
-    callback({
-      success: true,
-      room: roomSummary,
-    });
-
-    broadcastGameUpdate(room);
-  });
-
-  // Validate and apply one online edge move.
-  socket.on(
-    "game:move",
-    (payload, callback) => {
-      const roomCode = socket.data.roomCode;
-      const playerNumber =
-        socket.data.playerNumber;
-
-      if (!roomCode || !playerNumber) {
-        callback({
-          success: false,
-          message:
-            "Join a room before making a move.",
-        });
-
-        return;
-      }
-
-      const room = rooms.get(roomCode);
-
-      if (!room || !room.gameState) {
-        callback({
-          success: false,
-          message:
-            "The online game has not started.",
-        });
-
-        return;
-      }
-
-      if (!areAllRoomPlayersConnected(room)) {
-        callback({
-          success: false,
-          message:
-            "The match is paused while a player reconnects.",
-        });
-
-        return;
-      }
-
-      if (isServerGameComplete(room.gameState)) {
-        callback({
-          success: false,
-          message:
-            "The online game is already complete.",
-        });
-
-        return;
-      }
-
-      if (
-        room.gameState.currentPlayer !== playerNumber
-      ) {
-        callback({
-          success: false,
-          message:
-            "Wait for your turn before claiming an edge.",
-        });
-
-        return;
-      }
-
-      const selectedEdge =
-        room.gameState.edges.find(
-          (edge) => edge.id === payload.edgeId,
+        removeSocketFromRoom(
+          socket,
         );
 
-      if (!selectedEdge) {
-        callback({
-          success: false,
-          message:
-            "The selected edge does not exist.",
+        const recoveryToken =
+          generateRecoveryToken();
+
+        room.players.push({
+          socketId:
+            socket.id,
+
+          userId,
+
+          name:
+            playerName,
+
+          playerNumber:
+            2,
+
+          isConnected:
+            true,
+
+          recoveryToken,
+
+          disconnectTimer:
+            null,
         });
 
-        return;
-      }
+        socket.join(
+          roomCode,
+        );
 
-      if (selectedEdge.claimedBy !== null) {
+        socket.data.roomCode =
+          roomCode;
+
+        socket.data.playerName =
+          playerName;
+
+        socket.data.playerNumber =
+          2;
+
+        const roomSummary =
+          createRoomSummary(
+            room,
+          );
+
+        console.log(
+          `${playerName} joined room ${roomCode}`,
+        );
+
         callback({
-          success: false,
-          message:
-            "That edge has already been claimed.",
+          success: true,
+
+          room:
+            roomSummary,
+
+          recoveryToken,
         });
 
-        return;
-      }
-
-      room.gameState = applyServerMove(
-        room.gameState,
-        payload.edgeId,
-        playerNumber,
-      );
-
-      const roomSummary = createRoomSummary(room);
-
-      callback({
-        success: true,
-        room: roomSummary,
-      });
-
-      broadcastGameUpdate(room);
-    },
-  );
-
-  // Preserve room membership during temporary disconnections.
-  socket.on("disconnect", (reason) => {
-    const previousRoomCode =
-      socket.data.roomCode;
-
-    if (previousRoomCode) {
-      markPlayerDisconnected(socket);
-
-      console.log(
-        `Player ${socket.id} temporarily disconnected from room ${previousRoomCode}. Reason: ${reason}`,
-      );
-
-      return;
-    }
-
-    console.log(
-      `Player disconnected: ${socket.id}. Reason: ${reason}`,
+        broadcastRoomUpdate(
+          room,
+        );
+      },
     );
-  });
-});
+
+    // Recover a player's existing room position after a
+    // temporary Socket.IO disconnection.
+    socket.on(
+      "room:recover",
+      (
+        payload,
+        callback,
+      ) => {
+        const roomCode =
+          cleanRoomCode(
+            payload.roomCode,
+          );
+
+        const recoveryToken =
+          payload.recoveryToken
+            .trim();
+
+        if (
+          !roomCode ||
+          !recoveryToken
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "Room recovery information is incomplete.",
+          });
+
+          return;
+        }
+
+        // A socket already participating in a room should not
+        // recover a second player identity.
+        if (
+          socket.data.roomCode
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "Leave the current room before recovering another room.",
+          });
+
+          return;
+        }
+
+        const room =
+          rooms.get(
+            roomCode,
+          );
+
+        if (!room) {
+          callback({
+            success: false,
+
+            message:
+              "The room is no longer available.",
+          });
+
+          return;
+        }
+
+        const userId = socket.data.userId;
+
+        if (!userId) {
+          callback({
+            success: false,
+            message: "Authentication is required before recovering a room.",
+          });
+          return;
+        }
+
+        const recoveringPlayer =
+          room.players.find(
+            (player) =>
+              player.recoveryToken === recoveryToken &&
+              player.userId === userId,
+          );
+
+        if (
+          !recoveringPlayer
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "The recovery information does not belong to this authenticated account.",
+          });
+
+          return;
+        }
+
+        if (
+          recoveringPlayer.isConnected
+        ) {
+          const existingSocket =
+            io.sockets
+              .sockets.get(
+                recoveringPlayer.socketId,
+              );
+
+          if (
+            existingSocket
+              ?.connected
+          ) {
+            callback({
+              success: false,
+
+              message:
+                "That player is already connected to the room.",
+            });
+
+            return;
+          }
+
+          // Defensive correction if the old socket disappeared
+          // before its disconnect event updated the room record.
+          recoveringPlayer.isConnected =
+            false;
+        }
+
+        if (
+          recoveringPlayer.disconnectTimer
+        ) {
+          clearTimeout(
+            recoveringPlayer.disconnectTimer,
+          );
+
+          recoveringPlayer.disconnectTimer =
+            null;
+        }
+
+        // Replace the old temporary Socket.IO identity.
+        recoveringPlayer.socketId =
+          socket.id;
+
+        recoveringPlayer.isConnected =
+          true;
+
+        socket.join(
+          roomCode,
+        );
+
+        socket.data.roomCode =
+          roomCode;
+
+        socket.data.playerName =
+          recoveringPlayer.name;
+
+        socket.data.playerNumber =
+          recoveringPlayer.playerNumber;
+
+        const roomSummary =
+          createRoomSummary(
+            room,
+          );
+
+        console.log(
+          `${recoveringPlayer.name} recovered Player ${recoveringPlayer.playerNumber} in room ${roomCode}.`,
+        );
+
+        callback({
+          success: true,
+
+          room:
+            roomSummary,
+
+          recoveryToken:
+            recoveringPlayer.recoveryToken,
+        });
+
+        broadcastRoomUpdate(
+          room,
+        );
+
+        if (
+          room.gameState
+        ) {
+          broadcastGameUpdate(
+            room,
+          );
+        }
+      },
+    );
+
+    // Allow a player to leave manually.
+    socket.on(
+      "room:leave",
+      (callback) => {
+        const previousRoomCode =
+          socket.data.roomCode;
+
+        if (
+          !previousRoomCode
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "This player is not currently inside a room.",
+          });
+
+          return;
+        }
+
+        const updatedRoom =
+          removeSocketFromRoom(
+            socket,
+          );
+
+        console.log(
+          `Player ${socket.id} left room ${previousRoomCode}`,
+        );
+
+        callback({
+          success: true,
+
+          room:
+            updatedRoom ?? {
+              roomCode:
+                previousRoomCode,
+
+              status:
+                "waiting",
+
+              players: [],
+
+              gameState:
+                null,
+            },
+        });
+      },
+    );
+
+    // Start a new authoritative game.
+    socket.on(
+      "game:start",
+      (callback) => {
+        const roomCode =
+          socket.data.roomCode;
+
+        if (
+          !roomCode
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "Join a room before starting a game.",
+          });
+
+          return;
+        }
+
+        const room =
+          rooms.get(
+            roomCode,
+          );
+
+        if (!room) {
+          callback({
+            success: false,
+
+            message:
+              "The current room no longer exists.",
+          });
+
+          return;
+        }
+
+        if (
+          !areAllRoomPlayersConnected(
+            room,
+          )
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "Two players must be connected before the game can start.",
+          });
+
+          return;
+        }
+
+        if (
+          socket.data
+            .playerNumber !== 1
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "Only Player 1 can start the online match.",
+          });
+
+          return;
+        }
+
+        const playerOne =
+          room.players.find(
+            (player) =>
+              player.playerNumber ===
+              1,
+          );
+
+        const playerTwo =
+          room.players.find(
+            (player) =>
+              player.playerNumber ===
+              2,
+          );
+
+        if (
+          !playerOne ||
+          !playerTwo
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "Both player positions must be available.",
+          });
+
+          return;
+        }
+
+        room.gameState =
+          createServerGameState(
+            playerOne.name,
+            playerTwo.name,
+          );
+
+        const roomSummary =
+          createRoomSummary(
+            room,
+          );
+
+        console.log(
+          `Online game started in room ${roomCode}`,
+        );
+
+        callback({
+          success: true,
+
+          room:
+            roomSummary,
+        });
+
+        broadcastGameUpdate(
+          room,
+        );
+      },
+    );
+
+    // Validate and apply one online edge move.
+    socket.on(
+      "game:move",
+      (
+        payload,
+        callback,
+      ) => {
+        const roomCode =
+          socket.data.roomCode;
+
+        const playerNumber =
+          socket.data
+            .playerNumber;
+
+        if (
+          !roomCode ||
+          !playerNumber
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "Join a room before making a move.",
+          });
+
+          return;
+        }
+
+        const room =
+          rooms.get(
+            roomCode,
+          );
+
+        if (
+          !room ||
+          !room.gameState
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "The online game has not started.",
+          });
+
+          return;
+        }
+
+        if (
+          !areAllRoomPlayersConnected(
+            room,
+          )
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "The match is paused while a player reconnects.",
+          });
+
+          return;
+        }
+
+        if (
+          isServerGameComplete(
+            room.gameState,
+          )
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "The online game is already complete.",
+          });
+
+          return;
+        }
+
+        if (
+          room.gameState
+            .currentPlayer !==
+          playerNumber
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "Wait for your turn before claiming an edge.",
+          });
+
+          return;
+        }
+
+        const selectedEdge =
+          room.gameState
+            .edges.find(
+              (edge) =>
+                edge.id ===
+                payload.edgeId,
+            );
+
+        if (
+          !selectedEdge
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "The selected edge does not exist.",
+          });
+
+          return;
+        }
+
+        if (
+          selectedEdge.claimedBy !==
+          null
+        ) {
+          callback({
+            success: false,
+
+            message:
+              "That edge has already been claimed.",
+          });
+
+          return;
+        }
+
+        room.gameState =
+          applyServerMove(
+            room.gameState,
+            payload.edgeId,
+            playerNumber,
+          );
+
+        const roomSummary =
+          createRoomSummary(
+            room,
+          );
+
+        callback({
+          success: true,
+
+          room:
+            roomSummary,
+        });
+
+        broadcastGameUpdate(
+          room,
+        );
+      },
+    );
+
+    // Preserve room membership during temporary disconnections.
+    socket.on(
+      "disconnect",
+      (reason) => {
+        const previousRoomCode =
+          socket.data.roomCode;
+
+        if (
+          previousRoomCode
+        ) {
+          markPlayerDisconnected(
+            socket,
+          );
+
+          console.log(
+            `Player ${socket.id} temporarily disconnected from room ${previousRoomCode}. Reason: ${reason}`,
+          );
+
+          return;
+        }
+
+        console.log(
+          `Player disconnected: ${socket.id}. Reason: ${reason}`,
+        );
+      },
+    );
+  },
+);
 
 // Log low-level connection errors.
-io.engine.on("connection_error", (error) => {
-  console.error(
-    `Socket.IO connection error: ${error.message}`,
-  );
-});
+io.engine.on(
+  "connection_error",
+  (error) => {
+    console.error(
+      `Socket.IO connection error: ${error.message}`,
+    );
+  },
+);
 
 // Start Express and Socket.IO.
-httpServer.listen(PORT, "127.0.0.1", () => {
-  console.log(
-    `LineLock server is running at http://127.0.0.1:${PORT}`,
-  );
-});
+httpServer.listen(
+  PORT,
+  "127.0.0.1",
+  () => {
+    console.log(
+      `LineLock server is running at http://127.0.0.1:${PORT}`,
+    );
+  },
+);

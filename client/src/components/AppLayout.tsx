@@ -1,7 +1,20 @@
-import { NavLink, Outlet } from "react-router";
+import {
+    NavLink,
+    Outlet,
+} from "react-router";
+
+import { useAuth } from "../auth/AuthContext";
+
 import "../App.css";
 
 function AppLayout() {
+    // Read the current account so the shared navigation
+    // can change between signed-out and signed-in states.
+    const {
+        user,
+        authIsLoading,
+    } = useAuth();
+
     return (
         <div className="app">
             <header className="site-header">
@@ -64,9 +77,52 @@ function AppLayout() {
                     </NavLink>
                 </nav>
 
-                <span className="phase-badge">
-                    Phase 12
-                </span>
+                {/* Show account navigation after the initial
+                    authentication check has finished. */}
+                <div className="header-account-actions">
+                    {!authIsLoading && !user && (
+                        <>
+                            <NavLink
+                                className={({ isActive }) =>
+                                    isActive
+                                        ? "navigation-link active-navigation-link"
+                                        : "navigation-link"
+                                }
+                                to="/login"
+                            >
+                                Log In
+                            </NavLink>
+
+                            <NavLink
+                                className={({ isActive }) =>
+                                    isActive
+                                        ? "navigation-link active-navigation-link"
+                                        : "navigation-link"
+                                }
+                                to="/register"
+                            >
+                                Register
+                            </NavLink>
+                        </>
+                    )}
+
+                    {!authIsLoading && user && (
+                        <NavLink
+                            className={({ isActive }) =>
+                                isActive
+                                    ? "navigation-link active-navigation-link"
+                                    : "navigation-link"
+                            }
+                            to="/account"
+                        >
+                            {user.username}
+                        </NavLink>
+                    )}
+
+                    <span className="phase-badge">
+                        Phase 14
+                    </span>
+                </div>
             </header>
 
             {/* The matched page route renders inside this shared layout. */}
@@ -74,7 +130,8 @@ function AppLayout() {
 
             <footer className="site-footer">
                 <p>
-                    Built with React, TypeScript, Express, and Socket.IO.
+                    Built with React, TypeScript, Express,
+                    Socket.IO, PostgreSQL, and Prisma.
                 </p>
             </footer>
         </div>
