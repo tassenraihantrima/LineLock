@@ -140,7 +140,7 @@ interface ClientToServerEvents {
 // Fall back to the local server during development.
 const SERVER_URL =
     import.meta.env.VITE_SERVER_URL ??
-    "http://127.0.0.1:3001";
+    "http://localhost:3001";
 
 // Create one reusable typed Socket.IO client.
 //

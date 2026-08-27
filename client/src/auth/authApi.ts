@@ -27,7 +27,7 @@ export type AuthResponse =
 // Fall back to the local LineLock server during development.
 const API_URL =
     import.meta.env.VITE_SERVER_URL ??
-    "http://127.0.0.1:3001";
+    "http://localhost:3001";
 
 // Send one authentication request to the Express backend.
 async function authRequest(
