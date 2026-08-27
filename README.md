@@ -10,7 +10,7 @@ Players take turns drawing lines between adjacent dots. When a player completes 
 
 🚧 **Currently in active development**
 
-Phase 13 is complete.
+**Phase 14 — Authentication & Database is complete.**
 
 The project currently includes:
 
@@ -36,7 +36,6 @@ The project currently includes:
 - Host-controlled online match startup
 - Online match restart support
 - Rejection of invalid and out-of-turn moves
-- Automatic game cancellation after a player disconnects
 - Responsive and accessible online gameplay interfaces
 - Temporary online disconnection recovery
 - Private recovery-token player identity
@@ -48,12 +47,27 @@ The project currently includes:
 - Reconnection-aware lobby status
 - Paused online gameplay while a player reconnects
 - Automatic room cleanup after reconnection timeout
+- PostgreSQL-backed persistent player accounts
+- Prisma ORM database integration
+- User registration and login
+- Secure bcrypt password hashing
+- JWT-based authentication
+- HTTP-only authentication cookies
+- Persistent authenticated sessions
+- Authentication-aware React state
+- Protected account and online multiplayer routes
+- Authenticated Socket.IO connections
+- Server-controlled multiplayer account identity
+- Automatic use of account usernames in online rooms
+- Prevention of one account occupying both room positions
+- Account-bound room reconnection and recovery
+- Secure logout with Socket.IO and recovery-state cleanup
 
-Authentication and persistent player accounts will be implemented in Phase 14.
+Phase 15 will add player statistics, deployment, final documentation, and project polish.
 
 ---
 
-## Planned Features
+## Features
 
 ### Gameplay
 
@@ -66,25 +80,43 @@ Authentication and persistent player accounts will be implemented in Phase 14.
 - Winner detection
 - Game restart
 
-### Online Features
+### Online Multiplayer
 
 - Private game rooms
-- Room codes
+- Six-character room codes
+- Authenticated player identities
+- Server-authoritative game state
 - Server-side move validation
-- Player reconnection
+- Real-time board synchronization
+- Temporary disconnection recovery
+- Account-bound player recovery
+- Reconnection grace period
+- Automatic room cleanup
+
+### Authentication
+
+- Persistent player accounts
+- User registration
+- User login and logout
+- PostgreSQL account storage
+- bcrypt password hashing
+- JWT authentication
+- HTTP-only authentication cookies
+- Persistent browser sessions
+- Protected routes
+- Authenticated Socket.IO connections
+
+### Planned Features
+
 - Match history
-- Leaderboards
 - Player statistics
+- Leaderboards
 - Rankings
-
-### Future Improvements
-
-- User authentication
+- Production deployment
 - Achievement system
 - Spectator mode
 - Sound effects
-- Animations
-- Responsive mobile interface
+- Additional animations and interface polish
 
 ---
 
@@ -95,20 +127,28 @@ Authentication and persistent player accounts will be implemented in Phase 14.
 - React
 - TypeScript
 - Vite
+- React Router
+- Socket.IO Client
 - CSS
 
 ### Backend
 
 - Node.js
 - Express
-- Socket.IO
 - TypeScript
+- Socket.IO
+- bcrypt
+- JSON Web Tokens
+- Cookie-based authentication
 
-### Planned Infrastructure
+### Database
 
 - PostgreSQL
 - Prisma ORM
-- Authentication
+- Neon PostgreSQL
+
+### Planned Deployment
+
 - Vercel
 - Render
 
@@ -120,8 +160,17 @@ Authentication and persistent player accounts will be implemented in Phase 14.
 linelock/
 ├── client/
 │   └── src/
+│       ├── auth/
+│       ├── components/
+│       ├── game/
+│       ├── pages/
+│       └── socket/
 ├── server/
+│   ├── prisma/
 │   └── src/
+│       ├── auth/
+│       ├── generated/
+│       └── lib/
 ├── CODING_JOURNAL.md
 ├── package.json
 ├── README.md
@@ -131,11 +180,17 @@ linelock/
 ### Directory Overview
 
 | Directory | Purpose |
-|-----------|---------|
+|---|---|
 | `client/` | React frontend application |
-| `server/` | Express backend and Socket.IO server |
+| `client/src/auth/` | Frontend authentication state and API communication |
+| `client/src/game/` | Shared client game models and rules |
+| `client/src/pages/` | Application pages and routes |
+| `client/src/socket/` | Typed Socket.IO client |
+| `server/` | Express and Socket.IO backend |
+| `server/prisma/` | Prisma database schema and migrations |
+| `server/src/auth/` | Authentication and authorization logic |
+| `server/src/lib/` | Shared backend utilities |
 | `CODING_JOURNAL.md` | Development log documenting each phase |
-| `package.json` | Root project scripts |
 | `README.md` | Project documentation |
 
 ---
@@ -146,6 +201,7 @@ linelock/
 
 - Node.js
 - npm
+- PostgreSQL database
 
 ### Installation
 
@@ -164,6 +220,22 @@ npm install --prefix client
 npm install --prefix server
 ```
 
+Configure the required server environment variables in:
+
+```text
+server/.env
+```
+
+The backend requires a PostgreSQL database connection and authentication secret.
+
+Apply the Prisma migrations:
+
+```bash
+cd server
+npx prisma migrate deploy
+cd ..
+```
+
 Run the project:
 
 ```bash
@@ -172,8 +244,22 @@ npm run dev
 
 This starts:
 
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3001
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3001`
+
+---
+
+## Authentication Architecture
+
+LineLock uses persistent authenticated accounts for online multiplayer.
+
+Passwords are hashed with bcrypt before being stored in PostgreSQL. After successful registration or login, the server creates a signed authentication token and stores it in an HTTP-only cookie.
+
+The React application restores the authenticated session when the application loads.
+
+Socket.IO also validates the authentication cookie during its connection handshake. This allows the server to associate each multiplayer connection with a persistent database user rather than trusting a player identity supplied by the browser.
+
+Room recovery additionally verifies that the authenticated account owns the disconnected player position before restoring it.
 
 ---
 
@@ -192,7 +278,7 @@ This starts:
 - ✅ Phase 11 – Online Rooms
 - ✅ Phase 12 – Server-Controlled Game State
 - ✅ Phase 13 – Reconnection Handling
-- ⬜ Phase 14 – Authentication & Database
+- ✅ Phase 14 – Authentication & Database
 - ⬜ Phase 15 – Statistics, Deployment & Documentation
 
 ---

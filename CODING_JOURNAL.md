@@ -1633,3 +1633,253 @@ This prevents either player from gaining an advantage while their opponent is te
 ### Next Phase
 
 Phase 14 will introduce user authentication and persistent database storage so player identity, accounts, and multiplayer information can survive beyond individual server sessions.
+
+---
+
+## Phase 14 — Authentication & Database
+
+### Goal
+
+Add persistent user accounts to LineLock, store account data in PostgreSQL, authenticate HTTP and Socket.IO communication, and connect online multiplayer identities to authenticated users instead of browser-supplied player names.
+
+### Work Completed
+
+- Added PostgreSQL as LineLock's persistent database.
+- Created a hosted PostgreSQL database using Neon.
+- Added Prisma ORM to the backend.
+- Configured Prisma to connect to PostgreSQL through environment variables.
+- Created the initial Prisma `User` model.
+- Added persistent user IDs, unique emails, unique usernames, password hashes, and account timestamps.
+- Created and applied the initial user migration.
+- Generated the Prisma client for backend database access.
+- Added a reusable Prisma database client.
+- Added bcrypt password hashing.
+- Added JSON Web Token authentication.
+- Added HTTP-only authentication cookies.
+- Added account registration.
+- Added account login.
+- Added authenticated current-user lookup.
+- Added logout and authentication-cookie clearing.
+- Added middleware for protecting authenticated Express requests.
+- Added persistent authentication state to the React application.
+- Added a frontend authentication API layer.
+- Added `AuthProvider` and a reusable `useAuth` hook.
+- Added Login, Register, and Account pages.
+- Added protected routing for authenticated online multiplayer.
+- Added authentication-aware navigation.
+- Added authenticated Socket.IO middleware.
+- Configured Socket.IO to include authentication cookies during its handshake.
+- Added authenticated database user information to private Socket.IO state.
+- Connected room players to persistent database user IDs.
+- Prevented the same authenticated account from occupying both room positions.
+- Changed room creation to use the authenticated username automatically.
+- Changed room joining to use the authenticated username automatically.
+- Removed the manual player-name field from online multiplayer.
+- Restricted room recovery to the authenticated account that originally owned the player position.
+- Preserved Phase 13 recovery tokens as an additional private recovery credential.
+- Kept database user IDs, authentication tokens, recovery tokens, and password hashes out of public room data.
+- Standardized development URLs so HTTP authentication and Socket.IO share the same localhost cookie context.
+- Added PostgreSQL and Prisma to the displayed application technology stack.
+- Added logout cleanup for Socket.IO connections and saved recovery credentials.
+
+### Authentication Flow
+
+Registration now follows this process:
+
+1. The browser sends an email, username, and password to the Express server.
+2. The server validates the submitted values.
+3. Prisma checks PostgreSQL for duplicate emails and usernames.
+4. bcrypt hashes the password before storage.
+5. Prisma creates the persistent user record.
+6. The server creates a signed authentication token.
+7. The token is stored in an HTTP-only cookie.
+8. The browser receives only safe public user information.
+
+Login follows a similar process:
+
+1. The browser sends the email and password.
+2. Prisma loads the matching user.
+3. bcrypt compares the submitted password with the stored password hash.
+4. A valid login receives a new authentication cookie.
+5. React stores the authenticated public user information.
+
+Plaintext passwords are never stored in PostgreSQL.
+
+### Authenticated Socket.IO
+
+Online multiplayer now requires a valid LineLock account.
+
+When Socket.IO connects:
+
+1. The browser includes the authentication cookie in the handshake.
+2. The server reads the authentication cookie.
+3. The JWT is verified.
+4. The database user is confirmed through Prisma.
+5. The user's database ID and username are attached privately to the socket.
+6. Only authenticated connections are accepted.
+
+Unauthenticated Socket.IO connections are rejected before multiplayer events can be used.
+
+### Authenticated Room Identity
+
+Earlier online phases allowed the browser to submit a temporary player name.
+
+Phase 14 replaces that trust model with persistent account identity.
+
+When a player creates or joins a room, the server uses the authenticated account username automatically.
+
+The browser no longer controls the multiplayer identity.
+
+The server privately associates each room player with:
+
+- Database user ID
+- Current Socket.IO ID
+- Player number
+- Recovery token
+- Connection state
+
+The public room object exposes only the information needed by the client interface.
+
+### Authentication and Reconnection
+
+Phase 13 recovery behavior remains intact, but room recovery now also verifies persistent account ownership.
+
+A disconnected player can recover their position only when:
+
+- The recovery token is valid.
+- The authenticated database account matches the account that originally owned the player position.
+
+This prevents another authenticated account from using someone else's recovery token to take over their multiplayer slot.
+
+The existing thirty-second recovery grace period continues to preserve:
+
+- Room membership
+- Player position
+- Scores
+- Claimed edges
+- Completed boxes
+- Move count
+- Current turn
+- Active game state
+
+### Development Origin Fix
+
+During authentication integration, the frontend used `localhost` while the Socket.IO client initially connected through `127.0.0.1`.
+
+Because browser authentication cookies follow site and cookie rules, HTTP authentication could succeed while the Socket.IO handshake failed to receive the same cookie.
+
+The browser-facing development URLs were standardized to:
+
+- Frontend: `http://localhost:5173`
+- Backend client URL: `http://localhost:3001`
+
+This allowed HTTP authentication and Socket.IO authentication to share the same cookie context.
+
+### Security Decisions
+
+- Passwords are hashed with bcrypt before storage.
+- Plaintext passwords are never stored.
+- Authentication tokens are stored in HTTP-only cookies.
+- Authentication cookies are not exposed through React state.
+- Database user IDs remain private on the server.
+- Recovery tokens remain private.
+- Socket.IO connections require authentication.
+- Room recovery requires both recovery credentials and account ownership.
+- One authenticated account cannot occupy both positions in the same room.
+- Test authentication cookie files are excluded from Git.
+- `.env` files remain excluded from version control.
+
+### Files Added or Updated
+
+Backend authentication and database work was added primarily in:
+
+- `server/prisma/schema.prisma`
+- `server/src/auth/auth.ts`
+- `server/src/auth/authMiddleware.ts`
+- `server/src/auth/authTypes.ts`
+- `server/src/lib/prisma.ts`
+- `server/src/index.ts`
+- `server/prisma.config.ts`
+
+Frontend authentication work was added primarily in:
+
+- `client/src/auth/authApi.ts`
+- `client/src/auth/AuthContext.tsx`
+- `client/src/auth/RequireAuth.tsx`
+- `client/src/pages/LoginPage.tsx`
+- `client/src/pages/RegisterPage.tsx`
+- `client/src/pages/AccountPage.tsx`
+- `client/src/pages/OnlineGamePage.tsx`
+- `client/src/socket/socket.ts`
+- `client/src/main.tsx`
+- `client/src/App.tsx`
+- `client/src/components/AppLayout.tsx`
+
+### Testing Completed
+
+- Confirmed PostgreSQL connectivity.
+- Confirmed the Prisma user migration applies successfully.
+- Confirmed user accounts persist in PostgreSQL.
+- Confirmed passwords are stored as bcrypt hashes.
+- Confirmed registration creates a persistent user.
+- Confirmed login validates the original plaintext password against the stored hash.
+- Confirmed `/api/auth/me` returns the authenticated user when the cookie is present.
+- Confirmed unauthenticated `/api/auth/me` requests are rejected.
+- Confirmed logout clears authentication.
+- Confirmed the React account page restores authenticated sessions.
+- Confirmed navigation changes correctly between signed-out and signed-in states.
+- Confirmed `/online` requires authentication.
+- Confirmed unauthenticated Socket.IO connections are rejected.
+- Confirmed authenticated Socket.IO connections succeed.
+- Confirmed authenticated Socket.IO connections receive a valid socket ID.
+- Confirmed online room creation uses the authenticated account username.
+- Confirmed online room joining uses the authenticated account username.
+- Confirmed manual player-name entry is no longer required.
+- Confirmed one authenticated account cannot occupy both room positions.
+- Confirmed Player 1 can start an authenticated online match.
+- Confirmed online moves remain synchronized between both browsers.
+- Confirmed server-side move validation remains active.
+- Confirmed box ownership and scores remain synchronized.
+- Confirmed extra turns remain synchronized.
+- Confirmed game completion and winner results remain synchronized.
+- Confirmed temporary disconnections preserve the active room and game state.
+- Confirmed authenticated reconnection restores the correct player position.
+- Confirmed recovery credentials cannot be used by a different authenticated account.
+- Confirmed local gameplay remains unaffected.
+- Confirmed the client production build succeeds.
+- Confirmed the server TypeScript build succeeds.
+- Confirmed the full root production build succeeds.
+
+### Technologies Practiced
+
+- PostgreSQL
+- Prisma ORM
+- Database migrations
+- Persistent user models
+- Password hashing
+- JWT authentication
+- HTTP-only cookies
+- Express authentication middleware
+- React authentication state
+- Protected routes
+- Authenticated Socket.IO
+- Persistent multiplayer identity
+- Authorization checks
+- Account-bound reconnection
+- Full-stack authentication architecture
+
+### Phase 14 Result
+
+LineLock now has persistent authenticated user accounts backed by PostgreSQL.
+
+Online multiplayer no longer relies on browser-supplied player identities. Socket.IO connections are authenticated, room membership is tied to database users, and reconnection recovery verifies both temporary recovery credentials and persistent account ownership.
+
+Phase 14 is complete.
+
+### Next Phase
+
+Phase 15 will add persistent player statistics, deployment, final documentation, and production polish.
+
+
+
+

@@ -2,6 +2,7 @@ import {
     io,
     type Socket,
 } from "socket.io-client";
+
 import type {
     GameState,
 } from "../game/gameModels";
@@ -38,24 +39,25 @@ export type OnlineRoomPlayer = {
 // Describe the current online room state.
 export type OnlineRoom = {
     roomCode: string;
+
     status:
     | "waiting"
     | "ready"
     | "playing"
     | "complete";
+
     players: OnlineRoomPlayer[];
     gameState: GameState | null;
 };
 
-// Describe the information required to create a room.
-export type CreateRoomPayload = {
-    playerName: string;
-};
+// Creating a room no longer requires a browser-supplied
+// player name because the authenticated account provides it.
+export type CreateRoomPayload = Record<string, never>;
 
-// Describe the information required to join a room.
+// Joining a room only requires the room code.
+// The authenticated account provides the player identity.
 export type JoinRoomPayload = {
     roomCode: string;
-    playerName: string;
 };
 
 // Describe the credentials used to recover a room position
@@ -109,30 +111,42 @@ interface ClientToServerEvents {
 
     "room:create": (
         payload: CreateRoomPayload,
-        callback: (response: RoomActionResponse) => void,
+        callback: (
+            response: RoomActionResponse,
+        ) => void,
     ) => void;
 
     "room:join": (
         payload: JoinRoomPayload,
-        callback: (response: RoomActionResponse) => void,
+        callback: (
+            response: RoomActionResponse,
+        ) => void,
     ) => void;
 
     "room:recover": (
         payload: RecoverRoomPayload,
-        callback: (response: RoomActionResponse) => void,
+        callback: (
+            response: RoomActionResponse,
+        ) => void,
     ) => void;
 
     "room:leave": (
-        callback: (response: RoomActionResponse) => void,
+        callback: (
+            response: RoomActionResponse,
+        ) => void,
     ) => void;
 
     "game:start": (
-        callback: (response: RoomActionResponse) => void,
+        callback: (
+            response: RoomActionResponse,
+        ) => void,
     ) => void;
 
     "game:move": (
         payload: OnlineMovePayload,
-        callback: (response: RoomActionResponse) => void,
+        callback: (
+            response: RoomActionResponse,
+        ) => void,
     ) => void;
 }
 
@@ -150,12 +164,13 @@ const SERVER_URL =
 // Authentication cookies are included in the Socket.IO
 // handshake so the server can identify the logged-in user.
 export const socket: Socket<
-  ServerToClientEvents,
-  ClientToServerEvents
+    ServerToClientEvents,
+    ClientToServerEvents
 > = io(SERVER_URL, {
-  autoConnect: false,
-  withCredentials: true,
+    autoConnect: false,
+    withCredentials: true,
 });
 
 // Export the URL for the connection-information interface.
-export const socketServerUrl = SERVER_URL;
+export const socketServerUrl =
+    SERVER_URL;

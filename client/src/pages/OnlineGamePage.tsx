@@ -108,9 +108,6 @@ function OnlineGamePage() {
     // Record whether a ping is waiting for a response.
     const [pingIsPending, setPingIsPending] = useState(false);
 
-    // Store the player's lobby name.
-    const [playerName, setPlayerName] = useState("");
-
     // Store the room code entered into the join form.
     const [roomCodeInput, setRoomCodeInput] = useState("");
 
@@ -374,7 +371,7 @@ function OnlineGamePage() {
         socket.connect();
     }
 
-    // Create a new room.
+    // Create a new room using the authenticated account.
     function handleCreateRoom() {
         if (!socket.connected) {
             setRoomMessage(
@@ -388,9 +385,7 @@ function OnlineGamePage() {
 
         socket.emit(
             "room:create",
-            {
-                playerName,
-            },
+            {},
             (response: RoomActionResponse) => {
                 setRoomActionIsPending(false);
 
@@ -417,7 +412,7 @@ function OnlineGamePage() {
         );
     }
 
-    // Join an existing room.
+    // Join an existing room using the authenticated account.
     function handleJoinRoom(
         event: SubmitEvent<HTMLFormElement>,
     ) {
@@ -436,7 +431,6 @@ function OnlineGamePage() {
         socket.emit(
             "room:join",
             {
-                playerName,
                 roomCode: roomCodeInput,
             },
             (response: RoomActionResponse) => {
@@ -539,6 +533,7 @@ function OnlineGamePage() {
                 }
 
                 setActiveRoom(response.room);
+
                 setRoomMessage(
                     `${response.room.gameState?.players[0].name ?? "Player 1"} begins the online match.`,
                 );
@@ -781,27 +776,6 @@ function OnlineGamePage() {
                     <div className="room-entry-grid">
                         <section className="room-entry-panel">
                             <p className="room-panel-label">
-                                Your identity
-                            </p>
-
-                            <label className="online-room-field">
-                                <span>Player name</span>
-
-                                <input
-                                    type="text"
-                                    value={playerName}
-                                    maxLength={20}
-                                    autoComplete="off"
-                                    placeholder="Enter your name"
-                                    onChange={(event) => {
-                                        setPlayerName(event.target.value);
-                                    }}
-                                />
-                            </label>
-                        </section>
-
-                        <section className="room-entry-panel">
-                            <p className="room-panel-label">
                                 Host a match
                             </p>
 
@@ -972,6 +946,7 @@ function OnlineGamePage() {
                                     Waiting for Player 1 to start the match.
                                 </p>
                             )}
+
                         {activeRoom.status === "ready" &&
                             !allRoomPlayersConnected && (
                                 <p className="waiting-for-host-message">
@@ -1017,6 +992,7 @@ function OnlineGamePage() {
 
                                 <div>
                                     <p>Player 1</p>
+
                                     <h2>
                                         {onlineGameState.players[0].name}
                                     </h2>
@@ -1063,6 +1039,7 @@ function OnlineGamePage() {
 
                                 <div>
                                     <p>Player 2</p>
+
                                     <h2>
                                         {onlineGameState.players[1].name}
                                     </h2>
@@ -1133,22 +1110,16 @@ function OnlineGamePage() {
                 </p>
 
                 <h2>
-                    Reconnection handling begins in Phase 13.
+                    Statistics and deployment begin in Phase 15.
                 </h2>
 
                 <p>
-                    Online game state now lives on the server and remains
-                    synchronized between both connected browsers. The next
-                    phase will preserve player positions during temporary
-                    disconnections.
+                    Online multiplayer now uses authenticated LineLock
+                    accounts with server-controlled game state and
+                    reconnection recovery.
                 </p>
 
                 <div className="online-phase-list">
-                    <article className="completed-online-phase">
-                        <span>Phase 10</span>
-                        <strong>Socket.IO Integration</strong>
-                    </article>
-
                     <article className="completed-online-phase">
                         <span>Phase 11</span>
                         <strong>Online Rooms</strong>
@@ -1157,6 +1128,16 @@ function OnlineGamePage() {
                     <article className="completed-online-phase">
                         <span>Phase 12</span>
                         <strong>Server-Controlled State</strong>
+                    </article>
+
+                    <article className="completed-online-phase">
+                        <span>Phase 13</span>
+                        <strong>Reconnection Handling</strong>
+                    </article>
+
+                    <article className="completed-online-phase">
+                        <span>Phase 14</span>
+                        <strong>Authentication & Database</strong>
                     </article>
                 </div>
 

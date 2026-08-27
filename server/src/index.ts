@@ -137,15 +137,14 @@ type RoomRecord = {
   gameState: ServerGameState | null;
 };
 
-// Describe the information required to create a room.
-type CreateRoomPayload = {
-  playerName: string;
-};
+// Creating a room requires no browser-supplied identity.
+// The authenticated Socket.IO account provides the username.
+type CreateRoomPayload = Record<string, never>;
 
-// Describe the information required to join a room.
+// Joining a room only requires the room code.
+// The authenticated account provides the player identity.
 type JoinRoomPayload = {
   roomCode: string;
-  playerName: string;
 };
 
 // Identify a returning player after a temporary disconnect.
