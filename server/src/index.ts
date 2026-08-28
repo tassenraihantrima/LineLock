@@ -2515,10 +2515,9 @@ io.engine.on(
 // Start Express and Socket.IO.
 httpServer.listen(
   PORT,
-  "127.0.0.1",
   () => {
     console.log(
-      `LineLock server is running at http://127.0.0.1:${PORT}`,
+      `LineLock server is running at http://localhost:${PORT}`,
     );
   },
 );
