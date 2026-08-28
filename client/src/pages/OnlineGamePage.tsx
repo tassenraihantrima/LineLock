@@ -3,8 +3,9 @@ import {
     useState,
     type SubmitEvent,
 } from "react";
-import { Link } from "react-router";
+
 import GameBoard from "../components/GameBoard";
+
 import {
     socket,
     socketServerUrl,
@@ -889,9 +890,9 @@ function OnlineGamePage() {
 
                                         <span
                                             className={`room-player-state ${!roomPlayer ||
-                                                !roomPlayer.isConnected
-                                                ? "waiting-player-state"
-                                                : ""
+                                                    !roomPlayer.isConnected
+                                                    ? "waiting-player-state"
+                                                    : ""
                                                 }`}
                                         >
                                             {!roomPlayer
@@ -982,9 +983,9 @@ function OnlineGamePage() {
                     >
                         <article
                             className={`player-card ${!onlineGameIsComplete &&
-                                onlineGameState.currentPlayer === 1
-                                ? "active-player player-one-active"
-                                : ""
+                                    onlineGameState.currentPlayer === 1
+                                    ? "active-player player-one-active"
+                                    : ""
                                 }`}
                         >
                             <div className="player-information">
@@ -1006,10 +1007,10 @@ function OnlineGamePage() {
 
                         <article
                             className={`turn-card ${onlineGameIsComplete
-                                ? "game-complete-turn"
-                                : onlineGameState.currentPlayer === 1
-                                    ? "player-one-turn"
-                                    : "player-two-turn"
+                                    ? "game-complete-turn"
+                                    : onlineGameState.currentPlayer === 1
+                                        ? "player-one-turn"
+                                        : "player-two-turn"
                                 }`}
                             aria-live="polite"
                         >
@@ -1029,9 +1030,9 @@ function OnlineGamePage() {
 
                         <article
                             className={`player-card ${!onlineGameIsComplete &&
-                                onlineGameState.currentPlayer === 2
-                                ? "active-player player-two-active"
-                                : ""
+                                    onlineGameState.currentPlayer === 2
+                                    ? "active-player player-two-active"
+                                    : ""
                                 }`}
                         >
                             <div className="player-information">
@@ -1103,51 +1104,6 @@ function OnlineGamePage() {
                     />
                 </section>
             )}
-
-            <section className="online-next-step-card">
-                <p className="online-card-label">
-                    Next milestone
-                </p>
-
-                <h2>
-                    Statistics and deployment begin in Phase 15.
-                </h2>
-
-                <p>
-                    Online multiplayer now uses authenticated LineLock
-                    accounts with server-controlled game state and
-                    reconnection recovery.
-                </p>
-
-                <div className="online-phase-list">
-                    <article className="completed-online-phase">
-                        <span>Phase 11</span>
-                        <strong>Online Rooms</strong>
-                    </article>
-
-                    <article className="completed-online-phase">
-                        <span>Phase 12</span>
-                        <strong>Server-Controlled State</strong>
-                    </article>
-
-                    <article className="completed-online-phase">
-                        <span>Phase 13</span>
-                        <strong>Reconnection Handling</strong>
-                    </article>
-
-                    <article className="completed-online-phase">
-                        <span>Phase 14</span>
-                        <strong>Authentication & Database</strong>
-                    </article>
-                </div>
-
-                <Link
-                    className="secondary-page-link"
-                    to="/local"
-                >
-                    Play a local match
-                </Link>
-            </section>
         </main>
     );
 }
