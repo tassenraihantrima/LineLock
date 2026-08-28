@@ -8,14 +8,12 @@ import GameBoard from "../components/GameBoard";
 
 import {
     socket,
-    socketServerUrl,
     type ConnectionReadyPayload,
     type OnlineRoom,
-    type PongPayload,
     type RoomActionResponse,
 } from "../socket/socket";
 
-// Represent every connection state shown by the online page.
+// Represent every connection state needed by the online page.
 type ConnectionStatus =
     | "connecting"
     | "connected"
@@ -80,34 +78,16 @@ function clearRecoveryCredentials(): void {
 }
 
 function OnlineGamePage() {
-    // Display the current Socket.IO connection lifecycle.
+    // Track whether the real-time server is available.
     const [
         connectionStatus,
         setConnectionStatus,
     ] = useState<ConnectionStatus>("connecting");
 
-    // Display the identifier assigned by Socket.IO.
+    // Store the identifier assigned to this socket connection.
     const [socketId, setSocketId] = useState<string | null>(
         null,
     );
-
-    // Display the server's latest connection message.
-    const [serverMessage, setServerMessage] = useState(
-        "Opening a real-time connection to the LineLock server.",
-    );
-
-    // Store the server-confirmed connection time.
-    const [connectedAt, setConnectedAt] = useState<
-        string | null
-    >(null);
-
-    // Display the latest round-trip latency.
-    const [latency, setLatency] = useState<number | null>(
-        null,
-    );
-
-    // Record whether a ping is waiting for a response.
-    const [pingIsPending, setPingIsPending] = useState(false);
 
     // Store the room code entered into the join form.
     const [roomCodeInput, setRoomCodeInput] = useState("");
@@ -181,30 +161,19 @@ function OnlineGamePage() {
             );
         }
 
-        // Update the page when the socket connection opens.
+        // Update connection state when Socket.IO connects.
         function handleConnect() {
             setConnectionStatus("connected");
             setSocketId(socket.id ?? null);
 
-            setServerMessage(
-                "Connected. Waiting for server confirmation.",
-            );
-
             attemptRoomRecovery();
         }
 
-        // Clear room information after disconnection.
-        function handleDisconnect(reason: string) {
+        // Preserve recovery information when the connection drops.
+        function handleDisconnect() {
             setConnectionStatus("disconnected");
             setSocketId(null);
-            setConnectedAt(null);
-            setLatency(null);
-            setPingIsPending(false);
             setRoomActionIsPending(false);
-
-            setServerMessage(
-                `The real-time connection closed: ${reason}.`,
-            );
 
             const recoveryCredentials =
                 getRecoveryCredentials();
@@ -212,36 +181,27 @@ function OnlineGamePage() {
             setRoomMessage(
                 recoveryCredentials
                     ? "Connection interrupted. Your room position is being preserved while LineLock reconnects."
-                    : "The server connection ended. Reconnect before creating or joining a room.",
+                    : "Connection interrupted. LineLock is reconnecting.",
             );
         }
 
-        // Display connection errors.
-        function handleConnectError(error: Error) {
+        // Display a simple player-facing message if connection fails.
+        function handleConnectError() {
             setConnectionStatus("error");
             setSocketId(null);
-            setPingIsPending(false);
             setRoomActionIsPending(false);
 
-            setServerMessage(
-                `Unable to connect to the LineLock server: ${error.message}`,
+            setRoomMessage(
+                "Unable to connect to the game server. Please try again shortly.",
             );
         }
 
-        // Store the server's connection confirmation.
+        // Store the server-confirmed socket identifier.
         function handleConnectionReady(
             payload: ConnectionReadyPayload,
         ) {
             setConnectionStatus("connected");
             setSocketId(payload.socketId);
-            setServerMessage(payload.message);
-            setConnectedAt(payload.connectedAt);
-        }
-
-        // Calculate browser-server-browser latency.
-        function handlePong(payload: PongPayload) {
-            setLatency(Date.now() - payload.sentAt);
-            setPingIsPending(false);
         }
 
         // Store lobby membership updates.
@@ -310,7 +270,6 @@ function OnlineGamePage() {
             handleConnectionReady,
         );
 
-        socket.on("server:pong", handlePong);
         socket.on("room:updated", handleRoomUpdated);
         socket.on("game:updated", handleGameUpdated);
 
@@ -332,7 +291,6 @@ function OnlineGamePage() {
                 handleConnectionReady,
             );
 
-            socket.off("server:pong", handlePong);
             socket.off("room:updated", handleRoomUpdated);
             socket.off("game:updated", handleGameUpdated);
 
@@ -340,43 +298,11 @@ function OnlineGamePage() {
         };
     }, []);
 
-    // Test bidirectional real-time communication.
-    function handlePingServer() {
-        if (!socket.connected) {
-            setServerMessage(
-                "Connect to the server before sending a ping.",
-            );
-
-            return;
-        }
-
-        setPingIsPending(true);
-
-        socket.emit("client:ping", {
-            sentAt: Date.now(),
-        });
-    }
-
-    // Retry a failed connection.
-    function handleReconnect() {
-        if (socket.connected) {
-            return;
-        }
-
-        setConnectionStatus("connecting");
-
-        setServerMessage(
-            "Attempting to reconnect to the LineLock server.",
-        );
-
-        socket.connect();
-    }
-
     // Create a new room using the authenticated account.
     function handleCreateRoom() {
         if (!socket.connected) {
             setRoomMessage(
-                "Connect to the server before creating a room.",
+                "The game server is reconnecting. Please try again shortly.",
             );
 
             return;
@@ -421,7 +347,7 @@ function OnlineGamePage() {
 
         if (!socket.connected) {
             setRoomMessage(
-                "Connect to the server before joining a room.",
+                "The game server is reconnecting. Please try again shortly.",
             );
 
             return;
@@ -567,15 +493,6 @@ function OnlineGamePage() {
         );
     }
 
-    const connectionStatusLabel =
-        connectionStatus === "connected"
-            ? "Connected"
-            : connectionStatus === "connecting"
-                ? "Connecting"
-                : connectionStatus === "error"
-                    ? "Connection error"
-                    : "Disconnected";
-
     // Identify this browser's room position.
     const currentRoomPlayer = activeRoom?.players.find(
         (player) => player.socketId === socketId,
@@ -627,6 +544,9 @@ function OnlineGamePage() {
                 ? onlineGameState.players[1]
                 : null;
 
+    const serverIsAvailable =
+        connectionStatus === "connected";
+
     return (
         <main className="main-content online-page">
             <section className="hero-section online-hero">
@@ -639,105 +559,9 @@ function OnlineGamePage() {
                 </h1>
 
                 <p className="hero-description">
-                    Every online move is validated by the server and
-                    broadcast to both players from one authoritative game
-                    state.
+                    Create or join a private room and compete against
+                    another player in real time.
                 </p>
-            </section>
-
-            <section
-                className="socket-connection-card"
-                aria-labelledby="socket-connection-heading"
-            >
-                <div className="socket-card-heading">
-                    <div>
-                        <p className="online-card-label">
-                            Real-time server
-                        </p>
-
-                        <h2 id="socket-connection-heading">
-                            Socket.IO Connection
-                        </h2>
-                    </div>
-
-                    <span
-                        className={`connection-status connection-status-${connectionStatus}`}
-                        role="status"
-                        aria-live="polite"
-                    >
-                        <span aria-hidden="true" />
-                        {connectionStatusLabel}
-                    </span>
-                </div>
-
-                <p className="socket-server-message">
-                    {serverMessage}
-                </p>
-
-                <div className="socket-detail-grid">
-                    <article>
-                        <span>Server URL</span>
-                        <strong>{socketServerUrl}</strong>
-                    </article>
-
-                    <article>
-                        <span>Socket ID</span>
-                        <strong>
-                            {socketId ?? "Not assigned"}
-                        </strong>
-                    </article>
-
-                    <article>
-                        <span>Connected at</span>
-                        <strong>
-                            {connectedAt
-                                ? new Date(
-                                    connectedAt,
-                                ).toLocaleTimeString()
-                                : "Not connected"}
-                        </strong>
-                    </article>
-
-                    <article>
-                        <span>Round-trip latency</span>
-                        <strong>
-                            {latency === null
-                                ? "Not tested"
-                                : `${latency} ms`}
-                        </strong>
-                    </article>
-                </div>
-
-                <div className="socket-actions">
-                    <button
-                        className="socket-primary-button"
-                        type="button"
-                        disabled={
-                            connectionStatus !== "connected" ||
-                            pingIsPending
-                        }
-                        onClick={handlePingServer}
-                    >
-                        {pingIsPending
-                            ? "Waiting for Server..."
-                            : "Ping Server"}
-                    </button>
-
-                    {connectionStatus !== "connected" && (
-                        <button
-                            className="secondary-control-button"
-                            type="button"
-                            disabled={
-                                connectionStatus === "connecting"
-                            }
-                            onClick={handleReconnect}
-                        >
-                            {connectionStatus === "connecting"
-                                ? "Connecting..."
-                                : "Reconnect"}
-                        </button>
-                    )}
-                </div>
             </section>
 
             <section
@@ -780,7 +604,9 @@ function OnlineGamePage() {
                                 Host a match
                             </p>
 
-                            <h3>Create a new room</h3>
+                            <h3>
+                                Create a new room
+                            </h3>
 
                             <p>
                                 Generate a private room and wait for one opponent.
@@ -790,14 +616,16 @@ function OnlineGamePage() {
                                 className="socket-primary-button"
                                 type="button"
                                 disabled={
-                                    connectionStatus !== "connected" ||
+                                    !serverIsAvailable ||
                                     roomActionIsPending
                                 }
                                 onClick={handleCreateRoom}
                             >
                                 {roomActionIsPending
-                                    ? "Contacting Server..."
-                                    : "Create Room"}
+                                    ? "Creating Room..."
+                                    : !serverIsAvailable
+                                        ? "Connecting..."
+                                        : "Create Room"}
                             </button>
                         </section>
 
@@ -809,10 +637,14 @@ function OnlineGamePage() {
                                 Join a match
                             </p>
 
-                            <h3>Enter a room code</h3>
+                            <h3>
+                                Enter a room code
+                            </h3>
 
                             <label className="online-room-field">
-                                <span>Six-character code</span>
+                                <span>
+                                    Six-character code
+                                </span>
 
                                 <input
                                     type="text"
@@ -832,22 +664,28 @@ function OnlineGamePage() {
                                 className="secondary-control-button"
                                 type="submit"
                                 disabled={
-                                    connectionStatus !== "connected" ||
+                                    !serverIsAvailable ||
                                     roomActionIsPending
                                 }
                             >
                                 {roomActionIsPending
-                                    ? "Contacting Server..."
-                                    : "Join Room"}
+                                    ? "Joining Room..."
+                                    : !serverIsAvailable
+                                        ? "Connecting..."
+                                        : "Join Room"}
                             </button>
                         </form>
                     </div>
                 ) : (
                     <div className="active-room-content">
                         <section className="room-code-panel">
-                            <p>Room code</p>
+                            <p>
+                                Room code
+                            </p>
 
-                            <strong>{activeRoom.roomCode}</strong>
+                            <strong>
+                                {activeRoom.roomCode}
+                            </strong>
 
                             <button
                                 className="copy-room-code-button"
@@ -964,7 +802,9 @@ function OnlineGamePage() {
                         className="game-feedback online-turn-feedback"
                         aria-live="polite"
                     >
-                        <span aria-hidden="true">i</span>
+                        <span aria-hidden="true">
+                            i
+                        </span>
 
                         <p>
                             {onlineGameIsComplete
@@ -992,7 +832,9 @@ function OnlineGamePage() {
                                 <span className="player-dot player-one-dot" />
 
                                 <div>
-                                    <p>Player 1</p>
+                                    <p>
+                                        Player 1
+                                    </p>
 
                                     <h2>
                                         {onlineGameState.players[0].name}
@@ -1039,7 +881,9 @@ function OnlineGamePage() {
                                 <span className="player-dot player-two-dot" />
 
                                 <div>
-                                    <p>Player 2</p>
+                                    <p>
+                                        Player 2
+                                    </p>
 
                                     <h2>
                                         {onlineGameState.players[1].name}
@@ -1071,11 +915,14 @@ function OnlineGamePage() {
 
                             <p className="result-score">
                                 {onlineGameState.players[0].name}{" "}
+
                                 <strong>
                                     {onlineGameState.players[0].score}
                                 </strong>
 
-                                <span aria-hidden="true">–</span>
+                                <span aria-hidden="true">
+                                    –
+                                </span>
 
                                 <strong>
                                     {onlineGameState.players[1].score}
