@@ -16,6 +16,26 @@ The frontend is deployed with Vercel, while the Express and Socket.IO backend is
 
 ---
 
+## Screenshots
+
+### Home
+
+![LineLock Home](docs/linelock-home.png)
+
+### Local Game
+
+![LineLock Local Game](docs/linelock-local-game.png)
+
+### Online Multiplayer
+
+![LineLock Online Multiplayer](docs/linelock-online-multiplayer.png)
+
+### Player Statistics
+
+![LineLock Player Statistics](docs/linelock-player-statistics.png)
+
+---
+
 ## Project Status
 
 ✅ **Phase 15 — Statistics, Deployment & Documentation is complete.**
