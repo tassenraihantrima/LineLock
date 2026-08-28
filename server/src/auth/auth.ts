@@ -14,7 +14,7 @@ const AUTH_COOKIE_NAME = "linelock_auth";
 const JWT_EXPIRATION = "7d";
 
 // Read the JWT secret from the environment.
-// The server should not start authentication without one.
+// Authentication cannot operate without this value.
 function getJwtSecret(): string {
     const secret = process.env.JWT_SECRET;
 
@@ -75,13 +75,18 @@ export function setAuthCookie(
         token,
         {
             httpOnly: true,
-            sameSite: "lax",
+            // Local development can use a same-site cookie.
+            // Production uses a secure cross-site cookie because
+            // the frontend and backend are deployed separately.
+            sameSite:
+                process.env.NODE_ENV === "production"
+                    ? "none"
+                    : "lax",
 
-            // HTTPS-only cookies are required once the app is deployed.
             secure:
                 process.env.NODE_ENV === "production",
 
-            // Keep the cookie for seven days.
+            // Keep the session available for seven days.
             maxAge:
                 7 *
                 24 *
@@ -100,7 +105,14 @@ export function clearAuthCookie(
         AUTH_COOKIE_NAME,
         {
             httpOnly: true,
-            sameSite: "lax",
+            // Local development can use a same-site cookie.
+            // Production uses a secure cross-site cookie because
+            // the frontend and backend are deployed separately.
+            sameSite:
+                process.env.NODE_ENV === "production"
+                    ? "none"
+                    : "lax",
+
             secure:
                 process.env.NODE_ENV === "production",
         },
@@ -120,6 +132,12 @@ export function createPublicUser(
         id: string;
         email: string;
         username: string;
+
+        gamesPlayed: number;
+        wins: number;
+        losses: number;
+        ties: number;
+
         createdAt: Date;
     },
 ): PublicUser {
@@ -127,6 +145,20 @@ export function createPublicUser(
         id: user.id,
         email: user.email,
         username: user.username,
-        createdAt: user.createdAt.toISOString(),
+
+        gamesPlayed:
+            user.gamesPlayed,
+
+        wins:
+            user.wins,
+
+        losses:
+            user.losses,
+
+        ties:
+            user.ties,
+
+        createdAt:
+            user.createdAt.toISOString(),
     };
 }

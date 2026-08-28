@@ -3,6 +3,12 @@ export type AuthUser = {
     id: string;
     email: string;
     username: string;
+
+    gamesPlayed: number;
+    wins: number;
+    losses: number;
+    ties: number;
+
     createdAt: string;
 };
 
@@ -44,7 +50,7 @@ async function authRequest(
                 ...options?.headers,
             },
 
-            // Include LineLock's HTTP-only authentication cookie.
+            // Include the HTTP-only authentication cookie.
             credentials: "include",
         },
     );

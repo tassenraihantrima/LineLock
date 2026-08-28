@@ -120,7 +120,7 @@ function AppLayout() {
                     )}
 
                     <span className="phase-badge">
-                        Phase 14
+                        Phase 15
                     </span>
                 </div>
             </header>

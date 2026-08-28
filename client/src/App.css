@@ -1839,3 +1839,125 @@
   .vertical-edge:disabled) {
   transition: opacity 160ms ease;
 }
+
+/* ===========================
+   Player account
+   =========================== */
+
+.account-page {
+  width: 100%;
+}
+
+.account-card {
+  width: min(100%, 1040px);
+  margin: 0 auto;
+  padding: 32px;
+  display: grid;
+  gap: 32px;
+}
+
+.account-section {
+  display: grid;
+  gap: 20px;
+}
+
+.account-statistics-section {
+  padding-top: 28px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.account-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.account-info-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.44);
+  display: grid;
+  gap: 8px;
+}
+
+.account-info-card span,
+.account-stat-card span {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.account-info-card strong {
+  min-width: 0;
+  color: #f8fafc;
+  font-size: 1rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.account-statistics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.account-stat-card {
+  min-height: 118px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.44);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.account-stat-card strong {
+  color: #f8fafc;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  line-height: 1;
+}
+
+.account-win-rate-card {
+  border-color: rgba(129, 140, 248, 0.34);
+  background:
+    linear-gradient(135deg,
+      rgba(99, 102, 241, 0.13),
+      rgba(15, 23, 42, 0.44));
+}
+
+.account-actions {
+  padding-top: 4px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+@media (max-width: 900px) {
+  .account-profile-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .account-statistics-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .account-card {
+    padding: 22px;
+  }
+
+  .account-profile-grid,
+  .account-statistics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-stat-card {
+    min-height: 96px;
+  }
+}

@@ -135,6 +135,10 @@ type RoomRecord = {
   roomCode: string;
   players: RoomPlayerRecord[];
   gameState: ServerGameState | null;
+
+  // Prevent one completed match from updating
+  // persistent statistics more than once.
+  statisticsRecorded: boolean;
 };
 
 // Creating a room requires no browser-supplied identity.
@@ -265,10 +269,15 @@ const PORT =
 const RECONNECTION_GRACE_PERIOD_MS =
   30_000;
 
-// Accept both common Vite development addresses.
+// Allow the local Vite client during development and
+// the deployed frontend when a production URL is provided.
 const allowedClientOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+
+  ...(process.env.CLIENT_URL
+    ? [process.env.CLIENT_URL]
+    : []),
 ];
 
 // Store rooms inside the running server process.
@@ -593,6 +602,157 @@ function isServerGameComplete(
     gameState.moveCount >=
     gameState.edges.length
   );
+}
+
+// Store the result of one completed online match.
+//
+// Statistics are written for both accounts together so a match
+// cannot update one player without also updating the other.
+async function recordCompletedGameStatistics(
+  room: RoomRecord,
+): Promise<void> {
+  if (
+    !room.gameState ||
+    room.statisticsRecorded ||
+    !isServerGameComplete(
+      room.gameState,
+    )
+  ) {
+    return;
+  }
+
+  const playerOne =
+    room.players.find(
+      (player) =>
+        player.playerNumber === 1,
+    );
+
+  const playerTwo =
+    room.players.find(
+      (player) =>
+        player.playerNumber === 2,
+    );
+
+  if (
+    !playerOne ||
+    !playerTwo
+  ) {
+    return;
+  }
+
+  const playerOneScore =
+    room.gameState
+      .players[0]
+      .score;
+
+  const playerTwoScore =
+    room.gameState
+      .players[1]
+      .score;
+
+  // Work out the result before creating
+  // the two database updates.
+  const gameWasTied =
+    playerOneScore ===
+    playerTwoScore;
+
+  const playerOneWon =
+    playerOneScore >
+    playerTwoScore;
+
+  const playerTwoWon =
+    playerTwoScore >
+    playerOneScore;
+
+  // Mark the result before starting the asynchronous database
+  // operation so another event cannot record the same match.
+  room.statisticsRecorded =
+    true;
+
+  try {
+    await prisma.$transaction([
+      prisma.user.update({
+        where: {
+          id: playerOne.userId,
+        },
+
+        data: {
+          gamesPlayed: {
+            increment: 1,
+          },
+
+          wins: {
+            increment:
+              playerOneWon
+                ? 1
+                : 0,
+          },
+
+          losses: {
+            increment:
+              playerTwoWon
+                ? 1
+                : 0,
+          },
+
+          ties: {
+            increment:
+              gameWasTied
+                ? 1
+                : 0,
+          },
+        },
+      }),
+
+      prisma.user.update({
+        where: {
+          id: playerTwo.userId,
+        },
+
+        data: {
+          gamesPlayed: {
+            increment: 1,
+          },
+
+          wins: {
+            increment:
+              playerTwoWon
+                ? 1
+                : 0,
+          },
+
+          losses: {
+            increment:
+              playerOneWon
+                ? 1
+                : 0,
+          },
+
+          ties: {
+            increment:
+              gameWasTied
+                ? 1
+                : 0,
+          },
+        },
+      }),
+    ]);
+
+    console.log(
+      `Recorded statistics for completed room ${room.roomCode}`,
+    );
+  } catch (error) {
+    // Allow another attempt if the database write failed.
+    room.statisticsRecorded =
+      false;
+
+    console.error(
+      `Unable to record statistics for room ${room.roomCode}:`,
+      error,
+    );
+
+    throw error;
+  }
 }
 
 // Apply one valid edge claim to the authoritative state.
@@ -1795,6 +1955,10 @@ io.on(
           ],
 
           gameState: null,
+
+
+          statisticsRecorded:
+            false,
         };
 
         rooms.set(
@@ -2299,6 +2463,10 @@ io.on(
             playerTwo.name,
           );
 
+        // A fresh match needs its own statistics result.
+        room.statisticsRecorded =
+          false;
+
         const roomSummary =
           createRoomSummary(
             room,
@@ -2324,7 +2492,7 @@ io.on(
     // Validate and apply one online edge move.
     socket.on(
       "game:move",
-      (
+      async (
         payload,
         callback,
       ) => {
@@ -2454,6 +2622,23 @@ io.on(
             payload.edgeId,
             playerNumber,
           );
+
+        // A completed match contributes one result
+        // to each player's persistent statistics.
+        if (
+          isServerGameComplete(
+            room.gameState,
+          )
+        ) {
+          try {
+            await recordCompletedGameStatistics(
+              room,
+            );
+          } catch {
+            // The match itself remains complete even if
+            // the statistics database update fails.
+          }
+        }
 
         const roomSummary =
           createRoomSummary(

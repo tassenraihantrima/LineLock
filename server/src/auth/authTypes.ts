@@ -1,9 +1,17 @@
 // The user information that is safe to send back to the client.
-// Never include passwordHash in this type.
+//
+// Password hashes and private authentication data are never
+// included in this public account type.
 export type PublicUser = {
     id: string;
     email: string;
     username: string;
+
+    gamesPlayed: number;
+    wins: number;
+    losses: number;
+    ties: number;
+
     createdAt: string;
 };
 
@@ -20,7 +28,7 @@ export type LoginPayload = {
     password: string;
 };
 
-// Information stored inside our authentication token.
+// Information stored inside the authentication token.
 export type JwtPayload = {
     userId: string;
 };
