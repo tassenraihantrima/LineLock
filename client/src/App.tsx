@@ -53,7 +53,7 @@ function App() {
           element={<LoginPage />}
         />
 
-        {/* AccountPage also redirects signed-out users itself. */}
+        {/* The account page displays profile information and statistics. */}
         <Route
           path="account"
           element={<AccountPage />}

@@ -8,8 +8,8 @@ import { useAuth } from "../auth/AuthContext";
 import "../App.css";
 
 function AppLayout() {
-    // Read the current account so the shared navigation
-    // can change between signed-out and signed-in states.
+    // Read the current account so navigation can change
+    // between signed-out and signed-in states.
     const {
         user,
         authIsLoading,
@@ -34,10 +34,12 @@ function AppLayout() {
                         <span />
                     </span>
 
-                    <span>LineLock</span>
+                    <span>
+                        LineLock
+                    </span>
                 </NavLink>
 
-                {/* NavLink provides active-page information for navigation styling. */}
+                {/* Main navigation remains available across the application. */}
                 <nav
                     className="site-navigation"
                     aria-label="Primary navigation"
@@ -77,7 +79,7 @@ function AppLayout() {
                     </NavLink>
                 </nav>
 
-                {/* Show account navigation after the initial
+                {/* Account navigation appears after the initial
                     authentication check has finished. */}
                 <div className="header-account-actions">
                     {!authIsLoading && !user && (
@@ -118,14 +120,10 @@ function AppLayout() {
                             {user.username}
                         </NavLink>
                     )}
-
-                    <span className="phase-badge">
-                        Phase 15
-                    </span>
                 </div>
             </header>
 
-            {/* The matched page route renders inside this shared layout. */}
+            {/* The matched page route renders inside the shared layout. */}
             <Outlet />
 
             <footer className="site-footer">
