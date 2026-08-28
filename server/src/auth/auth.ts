@@ -5,7 +5,7 @@ import type { Response } from "express";
 import type {
     JwtPayload,
     PublicUser,
-} from "./authTypes.js";
+} from "./authTypes";
 
 // Name of the cookie used to keep the player logged in.
 const AUTH_COOKIE_NAME = "linelock_auth";

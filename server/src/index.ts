@@ -17,19 +17,19 @@ import {
   getAuthCookieName,
   setAuthCookie,
   verifyAuthToken,
-} from "./auth/auth.js";
+} from "./auth/auth";
 
 import {
   authenticateRequest,
   type AuthenticatedRequest,
-} from "./auth/authMiddleware.js";
+} from "./auth/authMiddleware";
 
 import type {
   LoginPayload,
   RegisterPayload,
-} from "./auth/authTypes.js";
+} from "./auth/authTypes";
 
-import { prisma } from "./lib/prisma.js";
+import { prisma } from "./lib/prisma";
 
 // Load values from the server .env file.
 dotenv.config({

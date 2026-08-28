@@ -7,7 +7,7 @@ import type {
 import {
     getAuthCookieName,
     verifyAuthToken,
-} from "./auth.js";
+} from "./auth";
 
 // Extend the normal Express request so authenticated
 // routes can access the ID of the logged-in user.
