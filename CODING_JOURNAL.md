@@ -1880,6 +1880,461 @@ Phase 14 is complete.
 
 Phase 15 will add persistent player statistics, deployment, final documentation, and production polish.
 
+---
 
+## Phase 15 — Statistics, Deployment & Documentation
+
+### Goal
+
+Complete the LineLock development roadmap by adding persistent player statistics, deploying the full-stack application to production, updating the interface for the completed project, and finalizing project documentation.
+
+### Work Completed
+
+- Added persistent player statistics to the PostgreSQL user model.
+- Added games-played tracking.
+- Added win tracking.
+- Added loss tracking.
+- Added tie tracking.
+- Created and applied a Prisma migration for player statistics.
+- Regenerated the Prisma client after the database schema update.
+- Updated completed online matches to record statistics for both authenticated players.
+- Added player statistics to authenticated user information.
+- Added calculated win-rate display.
+- Redesigned the Account page to display profile information and player statistics.
+- Added dedicated statistic cards for games played, wins, losses, ties, and win rate.
+- Verified statistics persist in PostgreSQL across authenticated sessions.
+- Prepared the Express and Socket.IO server for production deployment.
+- Added production frontend-origin configuration.
+- Added production-compatible authentication-cookie settings.
+- Configured credentialed production CORS.
+- Updated the backend to use the deployment platform's assigned port.
+- Configured the backend production runtime using `tsx`.
+- Deployed the Express and Socket.IO backend to Render.
+- Configured production backend environment variables.
+- Connected the deployed backend to the hosted Neon PostgreSQL database.
+- Deployed the React and Vite frontend to Vercel.
+- Configured the production backend URL using `VITE_SERVER_URL`.
+- Added Vercel SPA rewrites for React Router routes.
+- Connected the production frontend to the deployed Socket.IO server.
+- Verified the deployed online multiplayer interface connects to the production backend.
+- Removed development-only Socket.IO diagnostic information from the final online multiplayer interface.
+- Updated the online page to focus on room creation, room joining, and gameplay.
+- Updated project-facing interface text to remove outdated development milestones.
+- Updated the README to reflect the completed Phase 15 project.
+- Documented the production architecture and deployment.
+- Completed the fifteen-phase LineLock development roadmap.
+
+### Persistent Player Statistics
+
+The existing PostgreSQL `User` model was expanded with four persistent statistics:
+
+- Games played
+- Wins
+- Losses
+- Ties
+
+Each statistic begins at zero when a new account is created.
+
+Statistics are stored in PostgreSQL rather than browser storage, allowing them to remain available across browser refreshes, logout and login cycles, backend restarts, and future sessions.
+
+### Statistics Migration
+
+The Prisma schema was updated with the new statistic fields.
+
+A new database migration was created and successfully applied:
+
+```text
+20260828034115_add_player_statistics
+```
+
+After applying the migration, the Prisma client was regenerated so the backend TypeScript code could access the new fields.
+
+The database remained synchronized with the Prisma schema after the migration.
+
+### Match Result Recording
+
+Statistics are updated when an authenticated online match reaches its completed state.
+
+For a completed match:
+
+1. Both players receive one additional game played.
+2. The player with the higher score receives one additional win.
+3. The player with the lower score receives one additional loss.
+4. If both scores are equal, both players receive one additional tie.
+5. The updated values are stored persistently in PostgreSQL.
+
+Statistics are associated with authenticated database users rather than temporary Socket.IO connections.
+
+This allows multiplayer results to remain attached to the correct accounts even though Socket.IO connection IDs can change.
+
+### Account Statistics Interface
+
+The Account page was expanded into a player profile and statistics dashboard.
+
+Profile information includes:
+
+- Username
+- Email
+- Member-since date
+
+Player statistics include:
+
+- Games played
+- Wins
+- Losses
+- Ties
+- Win rate
+
+Win rate is calculated from the stored number of wins and games played.
+
+The interface uses separate cards for each statistic so the information remains readable on both desktop and smaller screens.
+
+### Statistics Testing
+
+A complete authenticated online match was played between two accounts.
+
+The final score was:
+
+```text
+trima 11 – 5 tassen
+```
+
+After the match completed, the account statistics showed:
+
+```text
+trima
+Games Played: 1
+Wins: 1
+Losses: 0
+Ties: 0
+Win Rate: 100%
+```
+
+and:
+
+```text
+tassen
+Games Played: 1
+Wins: 0
+Losses: 1
+Ties: 0
+Win Rate: 0%
+```
+
+This confirmed that the completed multiplayer result was recorded for both authenticated accounts and persisted correctly.
+
+### Production Architecture
+
+The completed production application uses three hosted services:
+
+```text
+Vercel
+React + TypeScript Client
+        │
+        ├── HTTPS requests
+        │
+        └── Socket.IO
+                │
+                ▼
+Render
+Express + Socket.IO Server
+                │
+                ▼
+Prisma ORM
+                │
+                ▼
+Neon PostgreSQL
+```
+
+Vercel hosts the browser application.
+
+Render hosts the Express API and Socket.IO multiplayer server.
+
+Neon provides the persistent PostgreSQL database.
+
+### Backend Production Preparation
+
+The backend originally used settings designed only for local development.
+
+Production deployment required the server to support:
+
+- A deployed frontend origin
+- Credentialed cross-origin requests
+- Production authentication cookies
+- The hosting platform's assigned port
+- A production-compatible TypeScript runtime
+
+The server was updated so the allowed client origin can be configured using the production environment.
+
+This allows the deployed Vercel frontend to communicate with the Render backend while keeping credentialed CORS restricted to approved origins.
+
+### Production Authentication Cookies
+
+Local development and production use different browser environments.
+
+During local development, the frontend and backend run using localhost.
+
+In production, the frontend and backend are hosted on different domains.
+
+The production authentication cookie therefore uses settings appropriate for secure cross-site requests.
+
+The client continues to send requests with credentials enabled so the authentication cookie can accompany requests to the deployed backend.
+
+### Backend Runtime Challenge
+
+The initial production backend deployment exposed an ES module resolution problem when running the TypeScript-compiled JavaScript output.
+
+The compiled server attempted to resolve local ES module imports from the `dist` directory and produced module-resolution errors.
+
+Adding JavaScript extensions to source imports created additional complications with the Prisma-generated client.
+
+Instead of continuing to modify TypeScript imports specifically for compiled Node.js module resolution, the production runtime was changed to execute the TypeScript server source with `tsx`.
+
+The production start command became:
+
+```json
+"start": "tsx src/index.ts"
+```
+
+The TypeScript build remains part of deployment verification, while `tsx` executes the server source in production.
+
+This allowed the existing TypeScript module structure and Prisma-generated client to work correctly without maintaining separate import conventions for development and production.
+
+### Backend Deployment
+
+The backend was deployed as a Render web service.
+
+Production backend:
+
+```text
+https://linelock.onrender.com
+```
+
+The Render service is configured from the `server` directory.
+
+The production build installs the required dependencies, generates the Prisma client, and verifies the TypeScript build.
+
+Render supplies the server port through its environment, so the Express and Socket.IO server listens using the provided `PORT` value rather than relying only on the local development port.
+
+The final Render deployment completed successfully and the service became publicly available.
+
+### Render Environment Configuration
+
+The production backend uses environment configuration for values including:
+
+- PostgreSQL database connection
+- JWT authentication secret
+- Approved frontend origin
+- Production environment mode
+
+Sensitive values remain outside the Git repository.
+
+Authentication secrets and database credentials are not stored in committed source files.
+
+### Frontend Deployment
+
+The React frontend was deployed using Vercel.
+
+Production frontend:
+
+```text
+https://linelock.vercel.app
+```
+
+The Vercel project uses the `client` directory as its application root.
+
+The frontend production build uses Vite and outputs the compiled application to the `dist` directory.
+
+The deployed frontend receives the production backend location through:
+
+```text
+VITE_SERVER_URL
+```
+
+This allows the same frontend source code to use localhost during development and the Render server in production.
+
+### Production Routing
+
+LineLock uses React Router for client-side navigation.
+
+Directly loading routes such as:
+
+```text
+/online
+/login
+/register
+/account
+```
+
+requires the production host to return the React application rather than searching for separate server files at those paths.
+
+A Vercel rewrite configuration was therefore added so application routes resolve to the React entry point.
+
+This allows both navigation from inside the application and direct browser loading of React Router routes.
+
+### Production Socket.IO Connection
+
+The deployed frontend connects to the same Render backend used by the Express API.
+
+Socket.IO continues to use credentialed connections so authenticated multiplayer sessions can be associated with database accounts.
+
+Production testing confirmed that the deployed online page established a Socket.IO connection to:
+
+```text
+https://linelock.onrender.com
+```
+
+This verified communication between the Vercel frontend and Render backend.
+
+### Final Online Interface Cleanup
+
+Earlier multiplayer phases displayed detailed Socket.IO diagnostic information directly on the Online page.
+
+This information was useful while developing and testing the initial real-time connection, including:
+
+- Server URL
+- Socket ID
+- Connection time
+- Round-trip latency
+- Manual ping controls
+
+These development diagnostics were removed from the final player-facing interface.
+
+The Online page now focuses on the actual multiplayer experience:
+
+- Creating a private room
+- Joining a room with a six-character code
+- Viewing room membership
+- Starting a match
+- Playing the synchronized game
+- Recovering from temporary disconnections
+- Viewing the final result
+- Starting another match
+
+The underlying Socket.IO connection handling remains active even though the development diagnostics are no longer displayed.
+
+### Final Documentation
+
+The project README was updated to reflect the completed application rather than describing Phase 15 as future work.
+
+The final documentation now includes:
+
+- Current project features
+- Local gameplay features
+- Online multiplayer features
+- Authentication architecture
+- Reconnection architecture
+- Persistent player statistics
+- Technology stack
+- Project structure
+- Local development instructions
+- Production deployment architecture
+- Live frontend and backend locations
+- Completed development roadmap
+- Possible future improvements
+
+The coding journal was also extended with this Phase 15 entry to preserve the development process and deployment decisions.
+
+### Technologies Practiced
+
+- PostgreSQL schema evolution
+- Prisma migrations
+- Persistent player statistics
+- Database-backed application state
+- Authenticated multiplayer result tracking
+- React statistics interfaces
+- Derived win-rate calculations
+- Production environment variables
+- Credentialed CORS
+- Secure production cookies
+- Vercel deployment
+- Render deployment
+- Neon PostgreSQL
+- Production Socket.IO
+- Cross-origin authentication
+- Vite production configuration
+- React Router production rewrites
+- Node.js production runtime configuration
+- TypeScript production execution with `tsx`
+- ES module debugging
+- Full-stack deployment debugging
+- Production documentation
+
+### Testing Completed
+
+- Confirmed the player-statistics Prisma migration succeeds.
+- Confirmed the Prisma client generates successfully after the schema update.
+- Confirmed new statistic fields are available through the backend.
+- Confirmed a completed online match increments games played for both players.
+- Confirmed the winning player's win count increases.
+- Confirmed the losing player's loss count increases.
+- Confirmed account statistics persist in PostgreSQL.
+- Confirmed the Account page displays games played.
+- Confirmed the Account page displays wins.
+- Confirmed the Account page displays losses.
+- Confirmed the Account page displays ties.
+- Confirmed the Account page calculates and displays win rate.
+- Confirmed the redesigned Account page renders successfully.
+- Confirmed the backend production build succeeds.
+- Confirmed the production server starts successfully using `tsx`.
+- Confirmed the Render backend deployment succeeds.
+- Confirmed the Render backend becomes publicly available.
+- Confirmed the Vercel frontend deployment succeeds.
+- Confirmed the deployed frontend renders successfully.
+- Confirmed direct production application routes render through Vercel.
+- Confirmed the production online page connects to the Render Socket.IO server.
+- Confirmed the production Online page displays the multiplayer room interface.
+- Confirmed development Socket.IO diagnostic information is removed from the final player-facing interface.
+- Confirmed the project documentation reflects the completed Phase 15 roadmap.
+
+### Challenges Encountered
+
+- Adding statistics required changing an existing persistent database schema without affecting existing accounts.
+- Multiplayer results needed to update two authenticated database users consistently.
+- Production frontend and backend hosting introduced cross-origin authentication requirements that do not exist in the same way during localhost development.
+- Credentialed CORS required explicitly allowing the production frontend origin.
+- Authentication cookies required production-specific secure cross-site settings.
+- Render assigns its own server port instead of using the local development port.
+- The initial compiled Node.js production runtime produced ES module import-resolution errors.
+- Changing source import extensions created conflicts with the Prisma-generated client.
+- Running the TypeScript source with `tsx` provided a production runtime that matched the project's existing module structure.
+- React Router required production rewrites so direct route loading worked on Vercel.
+- Deployment required separate environment configuration for the frontend, backend, authentication, and database without exposing secrets in Git.
+
+### Final Result
+
+LineLock progressed from a basic React and Express project into a deployed full-stack real-time multiplayer application.
+
+The completed project now supports:
+
+- Configurable local Dots and Boxes gameplay
+- Authenticated user accounts
+- Real-time online multiplayer
+- Server-authoritative game rules
+- Persistent PostgreSQL storage
+- Secure authentication
+- Temporary disconnection recovery
+- Account-bound multiplayer identity
+- Persistent player statistics
+- Production frontend hosting
+- Production backend hosting
+- Hosted database infrastructure
+
+All fifteen planned development phases are now complete.
+
+### Future Improvements
+
+Possible future extensions include:
+
+- Match history
+- Global leaderboards
+- Player rankings
+- Achievements
+- Spectator mode
+- Additional board customization
+- Sound effects
+- Additional animations and interface polish
+
+These features are optional extensions beyond the completed fifteen-phase development roadmap.
 
 
