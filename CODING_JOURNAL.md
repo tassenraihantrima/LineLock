@@ -1844,7 +1844,7 @@ Frontend authentication work was added primarily in:
 - Confirmed game completion and winner results remain synchronized.
 - Confirmed temporary disconnections preserve the active room and game state.
 - Confirmed authenticated reconnection restores the correct player position.
-- Confirmed recovery credentials cannot be used by a different authenticated account.
+- Confirmed room recovery requires both the recovery token and matching authenticated account ownership in the server authorization logic.
 - Confirmed local gameplay remains unaffected.
 - Confirmed the client production build succeeds.
 - Confirmed the server TypeScript build succeeds.
